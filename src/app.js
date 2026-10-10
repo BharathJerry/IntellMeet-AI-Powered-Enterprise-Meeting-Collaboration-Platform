@@ -5,6 +5,7 @@ import authRoutes from "./routes/auth.routes.js";
 import meetingRoutes from "./routes/meeting.routes.js";
 import taskRoutes from "./routes/task.routes.js";
 import { notFound, errorHandler } from "./middleware/error.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/meetings", meetingRoutes);
+app.use("/api/v1/meetings", aiRoutes);
 app.use("/api/v1/tasks", taskRoutes);
 
 app.use(notFound);
