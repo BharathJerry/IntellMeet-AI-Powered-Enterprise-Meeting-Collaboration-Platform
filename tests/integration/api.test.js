@@ -22,7 +22,7 @@ run("API integration", () => {
   let tokenA, tokenB, refreshA, idA, meetingId, taskId;
 
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URI_TEST);
+    await mongoose.connect(process.env.MONGO_URI_TEST, { dbName: "intellmeet_test_api" });
     if (!/test/i.test(mongoose.connection.name))
       throw new Error("Refusing to run: test database name must contain 'test'");
     await mongoose.connection.dropDatabase();
