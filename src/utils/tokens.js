@@ -4,8 +4,12 @@ import crypto from "crypto";
 export const signAccess = (id) =>
   jwt.sign({ id }, process.env.JWT_ACCESS_SECRET, { expiresIn: "15m" });
 
+// jwtid makes every refresh token unique, even if issued in the same second
 export const signRefresh = (id) =>
-  jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+  jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: "7d",
+    jwtid: crypto.randomUUID(),
+  });
 
 // sha256 (not bcrypt): bcrypt only reads the first 72 bytes, and JWT starts are near-identical
 export const hashToken = (t) => crypto.createHash("sha256").update(t).digest("hex");
