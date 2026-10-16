@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>176/176</span>
+                <span class='fraction'>187/187</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.71% </span>
+                <span class="strong">83.33% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>48/56</span>
+                <span class='fraction'>45/54</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>176/176</span>
+                <span class='fraction'>187/187</span>
             </div>
         
             
@@ -239,7 +239,18 @@
 <a name='L174'></a><a href='#L174'>174</a>
 <a name='L175'></a><a href='#L175'>175</a>
 <a name='L176'></a><a href='#L176'>176</a>
-<a name='L177'></a><a href='#L177'>177</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
@@ -252,6 +263,10 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
@@ -273,8 +288,6 @@
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
@@ -321,10 +334,11 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
@@ -353,6 +367,14 @@
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
@@ -421,13 +443,17 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 import Meeting from "../models/Meeting.js";
 import Message from "../models/Message.js";
+import { invalidateMeeting } from "../utils/cache.js";
 &nbsp;
 let io;
-// meetingId -&gt; Map(socketId -&gt; participant). In-memory: needs the Redis adapter to scale past 1 server.
-const rooms = new Map();
 &nbsp;
 const roomName = (id) =&gt; `meeting:${id}`;
-const participantsOf = (id) =&gt; [...(rooms.get(id)?.values() <span class="branch-0 cbranch-no" title="branch not covered" >?? [])</span>];
+&nbsp;
+// Participants are stored on each socket's `data`; fetchSockets() also sees sockets on other servers
+async function participantsOf(id) {
+  const sockets = await io.in(roomName(id)).fetchSockets();
+  return sockets.filter((s) =&gt; s.data.participant).map((s) =&gt; s.data.participant);
+}
 &nbsp;
 // Use from REST controllers: notifyUser(userId, "task:assigned", {...})
 export const notifyUser = (userId, event, payload) =&gt;
@@ -448,14 +474,12 @@ function leaveMeeting(socket) {
   const id = socket.data.meetingId;
   if (!id) return;
   socket.leave(roomName(id));
-  const room = rooms.get(id);
-  room?.delete(socket.id);
-  if (room &amp;&amp; room.size === 0) rooms.delete(id);
   socket.to(roomName(id)).emit("participant:left", {
     socketId: socket.id,
     userId: socket.user.id,
   });
   socket.data.meetingId = null;
+  socket.data.participant = null;
 }
 &nbsp;
 export function initSocket(httpServer) {
@@ -496,14 +520,15 @@ export function initSocket(httpServer) {
         if (isHost &amp;&amp; meeting.status === "scheduled") {
           meeting.status = "live";
           await meeting.save();
+          await invalidateMeeting(meeting.id);
         }
 &nbsp;
         const id = meeting.id;
-        socket.data.meetingId = id; // server-side truth; later events never trust client ids
-        if (!rooms.has(id)) rooms.set(id, new Map());
         const me = { socketId: socket.id, userId: uid, name: socket.user.name, muted: false, videoOff: false };
-        const existing = participantsOf(id); // snapshot before adding self
-        rooms.get(id).set(socket.id, me);
+        const existing = await participantsOf(id); // snapshot before adding self
+&nbsp;
+        socket.data.meetingId = id; // server-side truth; later events never trust client ids
+        socket.data.participant = me;
         socket.join(roomName(id));
         socket.to(roomName(id)).emit("participant:joined", me);
 &nbsp;
@@ -528,7 +553,15 @@ export function initSocket(httpServer) {
       "signal",
       handle(async ({ to, data }) =&gt; {
         const id = socket.data.meetingId;
-        if (!id || !rooms.get(id)?.has(to)) throw new Error("Peer not in your meeting");
+        if (!id) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error("Peer not in your meeting");</span>
+&nbsp;
+        // fast path for peers on this server (ICE candidates arrive in bursts), slower lookup for other servers
+        const local = io.sockets.sockets.get(to);
+        const inMeeting = local
+          ? local.data.meetingId === id
+<span class="branch-0 cbranch-no" title="branch not covered" >          : (await io.in(roomName(id)).fetchSockets()).some((s) =&gt; s.id === to);</span>
+        if (!inMeeting) throw new Error("Peer not in your meeting");
+&nbsp;
         io.to(to).emit("signal", { from: socket.id, data });
       })
     );
@@ -574,8 +607,8 @@ export function initSocket(httpServer) {
       "media:state",
       handle(async ({ muted, videoOff }) =&gt; {
         const id = socket.data.meetingId;
-        const me = id &amp;&amp; rooms.get(id)?.get(socket.id);
-        if (!me) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error("Not in a meeting");</span>
+        const me = socket.data.participant;
+        if (!id || !me) <span class="branch-0 cbranch-no" title="branch not covered" >throw new Error("Not in a meeting");</span>
         if (typeof muted === "boolean") me.muted = muted;
         if (typeof videoOff === "boolean") me.videoOff = videoOff;
         socket.to(roomName(id)).emit("media:state", {
@@ -598,7 +631,7 @@ export function initSocket(httpServer) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-14T11:16:13.440Z
+                at 2026-10-14T12:05:50.566Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

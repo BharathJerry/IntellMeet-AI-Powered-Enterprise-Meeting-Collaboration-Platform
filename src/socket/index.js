@@ -4,13 +4,17 @@ import mongoose from "mongoose";
 import User from "../models/User.js";
 import Meeting from "../models/Meeting.js";
 import Message from "../models/Message.js";
+import { invalidateMeeting } from "../utils/cache.js";
 
 let io;
-// meetingId -> Map(socketId -> participant). In-memory: needs the Redis adapter to scale past 1 server.
-const rooms = new Map();
 
 const roomName = (id) => `meeting:${id}`;
-const participantsOf = (id) => [...(rooms.get(id)?.values() ?? [])];
+
+// Participants are stored on each socket's `data`; fetchSockets() also sees sockets on other servers
+async function participantsOf(id) {
+  const sockets = await io.in(roomName(id)).fetchSockets();
+  return sockets.filter((s) => s.data.participant).map((s) => s.data.participant);
+}
 
 // Use from REST controllers: notifyUser(userId, "task:assigned", {...})
 export const notifyUser = (userId, event, payload) =>
@@ -31,14 +35,12 @@ function leaveMeeting(socket) {
   const id = socket.data.meetingId;
   if (!id) return;
   socket.leave(roomName(id));
-  const room = rooms.get(id);
-  room?.delete(socket.id);
-  if (room && room.size === 0) rooms.delete(id);
   socket.to(roomName(id)).emit("participant:left", {
     socketId: socket.id,
     userId: socket.user.id,
   });
   socket.data.meetingId = null;
+  socket.data.participant = null;
 }
 
 export function initSocket(httpServer) {
@@ -79,14 +81,15 @@ export function initSocket(httpServer) {
         if (isHost && meeting.status === "scheduled") {
           meeting.status = "live";
           await meeting.save();
+          await invalidateMeeting(meeting.id);
         }
 
         const id = meeting.id;
-        socket.data.meetingId = id; // server-side truth; later events never trust client ids
-        if (!rooms.has(id)) rooms.set(id, new Map());
         const me = { socketId: socket.id, userId: uid, name: socket.user.name, muted: false, videoOff: false };
-        const existing = participantsOf(id); // snapshot before adding self
-        rooms.get(id).set(socket.id, me);
+        const existing = await participantsOf(id); // snapshot before adding self
+
+        socket.data.meetingId = id; // server-side truth; later events never trust client ids
+        socket.data.participant = me;
         socket.join(roomName(id));
         socket.to(roomName(id)).emit("participant:joined", me);
 
@@ -111,7 +114,15 @@ export function initSocket(httpServer) {
       "signal",
       handle(async ({ to, data }) => {
         const id = socket.data.meetingId;
-        if (!id || !rooms.get(id)?.has(to)) throw new Error("Peer not in your meeting");
+        if (!id) throw new Error("Peer not in your meeting");
+
+        // fast path for peers on this server (ICE candidates arrive in bursts), slower lookup for other servers
+        const local = io.sockets.sockets.get(to);
+        const inMeeting = local
+          ? local.data.meetingId === id
+          : (await io.in(roomName(id)).fetchSockets()).some((s) => s.id === to);
+        if (!inMeeting) throw new Error("Peer not in your meeting");
+
         io.to(to).emit("signal", { from: socket.id, data });
       })
     );
@@ -157,8 +168,8 @@ export function initSocket(httpServer) {
       "media:state",
       handle(async ({ muted, videoOff }) => {
         const id = socket.data.meetingId;
-        const me = id && rooms.get(id)?.get(socket.id);
-        if (!me) throw new Error("Not in a meeting");
+        const me = socket.data.participant;
+        if (!id || !me) throw new Error("Not in a meeting");
         if (typeof muted === "boolean") me.muted = muted;
         if (typeof videoOff === "boolean") me.videoOff = videoOff;
         socket.to(roomName(id)).emit("media:state", {

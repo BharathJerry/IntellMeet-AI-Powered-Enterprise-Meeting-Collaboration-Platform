@@ -4,6 +4,7 @@ import User from "../models/User.js";
 import { AppError, asyncHandler } from "../utils/AppError.js";
 import { generateInsights } from "../services/ai.service.js";
 import { notifyUser } from "../socket/index.js";
+import { invalidateMeeting } from "../utils/cache.js";
 
 export const transcriptSchema = z.object({ text: z.string().trim().min(1).max(20000) });
 
@@ -52,6 +53,7 @@ async function runSummaryJob(meetingId) {
     meeting.aiStatus = "failed";
   }
   await meeting.save();
+  await invalidateMeeting(meetingId);
   memberIds.forEach((id) =>
     notifyUser(id.toString(), "summary:ready", { meetingId, status: meeting.aiStatus })
   );
@@ -64,6 +66,7 @@ export const addTranscript = asyncHandler(async (req, res) => {
   if (next.length > MAX_TRANSCRIPT) throw new AppError("Transcript too long", 413);
   meeting.transcript = next;
   await meeting.save();
+  await invalidateMeeting(meeting.id);
   res.status(201).json({ success: true, length: next.length });
 });
 
@@ -75,6 +78,7 @@ export const summarize = asyncHandler(async (req, res) => {
 
   meeting.aiStatus = "pending";
   await meeting.save();
+  await invalidateMeeting(meeting.id);
   res.status(202).json({ success: true, aiStatus: "pending" });
 
   runSummaryJob(meeting.id).catch((e) => console.error("AI job crashed:", e));

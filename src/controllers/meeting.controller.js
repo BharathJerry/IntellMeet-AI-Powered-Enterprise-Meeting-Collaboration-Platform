@@ -2,6 +2,7 @@ import { z } from "zod";
 import Meeting from "../models/Meeting.js";
 import Task from "../models/Task.js";
 import { AppError, asyncHandler } from "../utils/AppError.js";
+import { getCachedMeeting, cacheMeeting, invalidateMeeting } from "../utils/cache.js";
 
 export const createMeetingSchema = z.object({
   title: z.string().min(2),
@@ -42,9 +43,19 @@ export const listMeetings = asyncHandler(async (req, res) => {
   res.json({ success: true, page, total, meetings });
 });
 
+// Cache-aside: the permission check always runs, even on a cache hit
 export const getMeeting = asyncHandler(async (req, res) => {
+  const uid = req.user.id;
+  const cached = await getCachedMeeting(req.params.id);
+  if (cached) {
+    if (cached.host !== uid && !cached.participants.includes(uid))
+      throw new AppError("Forbidden", 403);
+    return res.set("X-Cache", "HIT").json({ success: true, meeting: cached });
+  }
+
   const meeting = await getAccessible(req.params.id, req.user);
-  res.json({ success: true, meeting });
+  await cacheMeeting(meeting.id, meeting);
+  res.set("X-Cache", "MISS").json({ success: true, meeting });
 });
 
 export const updateMeeting = asyncHandler(async (req, res) => {
@@ -52,6 +63,7 @@ export const updateMeeting = asyncHandler(async (req, res) => {
   if (!meeting.host.equals(req.user._id)) throw new AppError("Only the host can edit", 403);
   Object.assign(meeting, req.body);
   await meeting.save();
+  await invalidateMeeting(meeting.id);
   res.json({ success: true, meeting });
 });
 
@@ -59,6 +71,7 @@ export const deleteMeeting = asyncHandler(async (req, res) => {
   const meeting = await getAccessible(req.params.id, req.user);
   if (!meeting.host.equals(req.user._id)) throw new AppError("Only the host can delete", 403);
   await meeting.deleteOne();
+  await invalidateMeeting(meeting.id);
   res.status(204).end();
 });
 
@@ -69,6 +82,7 @@ export const joinMeeting = asyncHandler(async (req, res) => {
     { new: true }
   );
   if (!meeting) throw new AppError("Meeting not found", 404);
+  await invalidateMeeting(meeting.id);
   res.json({ success: true, meeting });
 });
 
@@ -87,5 +101,6 @@ export const convertActionItems = asyncHandler(async (req, res) => {
   );
   pending.forEach((a) => (a.converted = true));
   await meeting.save();
+  await invalidateMeeting(meeting.id);
   res.status(201).json({ success: true, tasks });
 });
