@@ -16,7 +16,7 @@ function Tile({ stream, name, muted, off, local, big }) {
   );
 }
 
-export default function Room({ meetingId, session, onLeave }) {
+export default function Room({ meetingId, session, onLeave, initial = {} }) {
   const me = session.user;
   const [title, setTitle] = useState("Meeting");
   const [peers, setPeers] = useState({}); // socketId -> { name, stream, muted, videoOff }
@@ -24,8 +24,8 @@ export default function Room({ meetingId, session, onLeave }) {
   const [msgs, setMsgs] = useState([]);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState("");
-  const [mic, setMic] = useState(true);
-  const [cam, setCam] = useState(true);
+  const [mic, setMic] = useState(initial.mic !== false);
+  const [cam, setCam] = useState(initial.cam !== false);
   const [rec, setRec] = useState(false);
   const [err, setErr] = useState("");
   const sock = useRef(null), media = useRef(null), pcs = useRef({}), queue = useRef(Promise.resolve());
@@ -43,6 +43,8 @@ export default function Room({ meetingId, session, onLeave }) {
         media.current = new MediaStream();
       }
       if (dead) return media.current.getTracks().forEach((t) => t.stop());
+      if (initial.mic === false) media.current.getAudioTracks().forEach((t) => (t.enabled = false));
+      if (initial.cam === false) media.current.getVideoTracks().forEach((t) => (t.enabled = false));
       setLocal(media.current);
 
       const s = (sock.current = io(API, { auth: { token: getSession().accessToken } }));
@@ -85,6 +87,7 @@ export default function Room({ meetingId, session, onLeave }) {
       s.emit("meeting:join", { meetingId }, async (res) => {
         if (!res.ok) return setErr(res.error);
         setMsgs(res.messages);
+        if (initial.mic === false || initial.cam === false) s.emit("media:state", { muted: initial.mic === false, videoOff: initial.cam === false });
         setPeers(Object.fromEntries(res.participants.map((p) => [p.socketId, p])));
         // the newcomer calls everyone already in the room
         for (const p of res.participants) {
@@ -206,7 +209,7 @@ export default function Room({ meetingId, session, onLeave }) {
         </div>
         <div className="small muted">{typing}</div>
         <form className="send" onSubmit={send}>
-          <input placeholder="Type your message" value={text} onChange={(e) => onType(e.target.value)} />
+          <input aria-label="Type your message" placeholder="Type your message" value={text} onChange={(e) => onType(e.target.value)} />
           <button>➤</button>
         </form>
       </aside>

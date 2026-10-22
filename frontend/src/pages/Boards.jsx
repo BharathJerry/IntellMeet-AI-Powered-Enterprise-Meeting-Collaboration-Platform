@@ -56,7 +56,7 @@ export default function Boards() {
           {wss.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
         </select>
         <form className="row" onSubmit={addWs}>
-          <input placeholder="New workspace name" value={wsName} onChange={(e) => setWsName(e.target.value)} required minLength={2} />
+          <input aria-label="New workspace name" placeholder="New workspace name" value={wsName} onChange={(e) => setWsName(e.target.value)} required minLength={2} />
           <button className="ghost">Create workspace</button>
         </form>
       </div>
@@ -64,7 +64,7 @@ export default function Boards() {
       {ws && (
         <>
           <form className="card row" onSubmit={addBoard}>
-            <input placeholder="New board name (e.g. Sprint 1)" value={bName} onChange={(e) => setBName(e.target.value)} required minLength={2} />
+            <input aria-label="New board name (e.g. Sprint 1)" placeholder="New board name (e.g. Sprint 1)" value={bName} onChange={(e) => setBName(e.target.value)} required minLength={2} />
             <button className="primary">Add board</button>
           </form>
           <div className="grid">
