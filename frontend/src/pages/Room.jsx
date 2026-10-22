@@ -7,10 +7,11 @@ const ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 function Tile({ stream, name, muted, off, local, big }) {
   const ref = useRef();
   useEffect(() => { if (ref.current) ref.current.srcObject = stream || null; }, [stream]);
+  const hasVideo = stream?.getVideoTracks().some((track) => track.readyState === "live" && track.enabled);
   return (
     <div className={big ? "tile big room-video-tile" : "tile room-video-tile"}>
       <video ref={ref} autoPlay playsInline muted={!!local} />
-      {(off || !stream) && <div className="ph">{name?.[0] || "?"}</div>}
+      {(off || !hasVideo) && <div className="ph"><span className="room-avatar-initial">{name?.[0] || "?"}</span></div>}
       <span className="tag"><span className="room-live-dot" />{name}{muted ? " 🔇" : ""}</span>
     </div>
   );
@@ -19,6 +20,7 @@ function Tile({ stream, name, muted, off, local, big }) {
 export default function Room({ meetingId, session, onLeave, initial = {} }) {
   const me = session.user;
   const [title, setTitle] = useState("Meeting");
+  const [meetingDate, setMeetingDate] = useState("");
   const [peers, setPeers] = useState({}); // socketId -> { name, stream, muted, videoOff }
   const [local, setLocal] = useState(null);
   const [msgs, setMsgs] = useState([]);
@@ -33,7 +35,10 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
 
   useEffect(() => {
     let dead = false;
-    api(`/meetings/${meetingId}`).then((d) => setTitle(d.meeting.title)).catch(() => {});
+    api(`/meetings/${meetingId}`).then((d) => {
+      setTitle(d.meeting.title);
+      setMeetingDate(new Date(d.meeting.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }));
+    }).catch(() => {});
 
     (async () => {
       try {
@@ -176,12 +181,19 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
       <section className="card stage room-stage">
         <header className="room-stage-header">
           <button className="room-back" onClick={onLeave} aria-label="Leave meeting"><span aria-hidden="true">←</span></button>
-          <div className="room-title"><span className="page-eyebrow">LIVE MEETING</span><h2>{title}</h2><span className="room-participant-count"><span className="room-live-dot" />{others.length + 1} {others.length === 0 ? "person" : "people"} here</span></div>
-          {rec && <span className="rec"><span className="room-live-dot" /> Transcribing</span>}
+          <div className="room-title"><span className="page-eyebrow">LIVE MEETING</span><h2>{title}</h2><div className="room-meta"><span>{meetingDate || "Meeting in progress"}</span><span className="room-participant-count"><span className="room-live-dot" />{others.length + 1} {others.length === 0 ? "person" : "people"} here</span></div></div>
+          {rec && <span className="rec"><span className="room-live-dot" /> Recording transcript</span>}
         </header>
         {err && <div className="err">{err}</div>}
         <div className="room-stage-surface"><Tile big {...stage} /></div>
-        {thumbs.length > 0 && <div className="thumbs room-thumbnails">{thumbs.map((t, i) => <Tile key={i} {...t} />)}</div>}
+        {thumbs.length > 0 ? (
+          <div className="thumbs room-thumbnails">{thumbs.map((t, i) => <Tile key={i} {...t} />)}</div>
+        ) : (
+          <div className="room-attendee-empty">
+            <span className="room-attendee-empty-avatar" aria-hidden="true">＋</span>
+            <span><b>Waiting for teammates</b><small>They’ll appear here when they join.</small></span>
+          </div>
+        )}
         <footer className="bar room-controls">
           <button className="leave" onClick={onLeave}>Leave</button>
           <button className={`ctl ${mic ? "" : "off"}`} onClick={() => toggle("audio")}>{mic ? "🎤 Mute" : "🔇 Unmute"}</button>
@@ -200,7 +212,7 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
           </div>
         </section>
         <section className="room-chat-section">
-          <div className="room-sidebar-heading"><div><span className="page-eyebrow">MESSAGES</span><h3>Meeting chat</h3></div><span className="room-count-badge">{msgs.length}</span></div>
+          <div className="room-sidebar-heading"><div><span className="page-eyebrow">CONVERSATION</span><h3>Chat</h3></div><span className="room-count-badge">{msgs.length}</span></div>
           <div className="chat room-chat">
             {msgs.length === 0 && <div className="room-chat-empty"><span aria-hidden="true">⌁</span><p>Messages shared here will appear in this chat.</p></div>}
             {msgs.map((m) => (

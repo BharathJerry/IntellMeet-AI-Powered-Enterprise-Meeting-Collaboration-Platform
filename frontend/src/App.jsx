@@ -17,8 +17,8 @@ import "./more.css";
 import "./more2.css";
 
 const NAV = [
-  ["home", "🏠", "Meetings"], ["history", "📜", "History"], ["boards", "🗂", "Boards"],
-  ["team", "👥", "Team"], ["dash", "📊", "Dashboard"],
+  ["home", "⌂", "Meetings"], ["history", "◷", "History"], ["boards", "▦", "Boards"],
+  ["team", "♧", "Team"], ["dash", "▤", "Dashboard"],
 ];
 
 export default function App() {
