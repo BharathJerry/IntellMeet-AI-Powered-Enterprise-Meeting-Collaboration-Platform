@@ -28,22 +28,28 @@ export default function Lobby({ meetingId, onJoin, onBack }) {
   };
 
   return (
-    <div className="card lobby">
-      <h2>{title || "Meeting"}</h2>
-      <p className="muted small">Check how you look and sound before joining.</p>
-      <div className="tile big">
-        <video ref={video} autoPlay playsInline muted />
-        {(!cam || !stream) && <div className="ph">📷</div>}
-      </div>
-      <div className="bar">
-        <button className={`ctl ${mic ? "" : "off"}`} onClick={() => flip("mic", !mic)}>{mic ? "🎤 Mic on" : "🔇 Mic off"}</button>
-        <button className={`ctl ${cam ? "" : "off"}`} onClick={() => flip("cam", !cam)}>{cam ? "📷 Camera on" : "📷 Camera off"}</button>
-      </div>
-      {err && <div className="err">{err}</div>}
-      <div className="row">
-        <button className="primary" onClick={() => onJoin({ mic, cam })}>Join now</button>
-        <button className="ghost" onClick={onBack}>Cancel</button>
-      </div>
+    <div className="lobby-page">
+      <button className="lobby-back" onClick={onBack}><span aria-hidden="true">←</span> Back to meetings</button>
+      <section className="lobby-card card">
+        <div className="lobby-heading"><span className="page-eyebrow">READY TO JOIN?</span><h2>{title || "Meeting"}</h2><p className="muted">Take a moment to check your camera and microphone.</p></div>
+        <div className="lobby-preview">
+          <div className="tile big">
+            <video ref={video} autoPlay playsInline muted />
+            {(!cam || !stream) && <div className="ph"><span aria-hidden="true">◉</span><small>{cam ? "Waiting for camera…" : "Your camera is off"}</small></div>}
+            <span className="lobby-preview-label"><span className="lobby-preview-dot" /> Preview · only you can see this</span>
+          </div>
+        </div>
+        <div className="lobby-device-row">
+          <button className={`ctl lobby-device ${mic ? "" : "off"}`} onClick={() => flip("mic", !mic)}><span className="lobby-device-icon" aria-hidden="true">{mic ? "♩" : "×"}</span><span><b>Microphone</b><small>{mic ? "On" : "Off"}</small></span><span className="lobby-device-state" /></button>
+          <button className={`ctl lobby-device ${cam ? "" : "off"}`} onClick={() => flip("cam", !cam)}><span className="lobby-device-icon" aria-hidden="true">{cam ? "▣" : "×"}</span><span><b>Camera</b><small>{cam ? "On" : "Off"}</small></span><span className="lobby-device-state" /></button>
+        </div>
+        {err && <div className="err" role="alert">{err}</div>}
+        <div className="lobby-actions">
+          <button className="primary" onClick={() => onJoin({ mic, cam })}>Join meeting <span aria-hidden="true">→</span></button>
+          <button className="ghost" onClick={onBack}>Cancel</button>
+        </div>
+      </section>
+      <p className="lobby-privacy"><span aria-hidden="true">◈</span> Your camera and microphone settings stay under your control.</p>
     </div>
   );
 }

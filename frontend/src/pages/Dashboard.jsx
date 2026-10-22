@@ -9,8 +9,8 @@ export default function Dashboard() {
 
   useEffect(() => { api("/analytics/overview").then(setD).catch((e) => setErr(e.message)); }, []);
 
-  if (err) return <div className="err">{err}</div>;
-  if (!d) return <p className="muted">Loading…</p>;
+  if (err) return <div className="dashboard-page"><div className="err" role="alert">{err}</div></div>;
+  if (!d) return <div className="dashboard-page"><div className="dashboard-loading"><span className="history-loading-mark" aria-hidden="true" /><p className="muted">Preparing your workspace insights…</p></div></div>;
 
   const days = d.meetings.perDay;
   const max = Math.max(1, ...days.map((x) => x.count));
@@ -36,28 +36,32 @@ export default function Dashboard() {
   };
 
   const stats = [
-    ["Meetings", d.meetings.total],
-    ["Tasks", d.tasks.total],
-    ["Completion", `${d.tasks.completionRate}%`],
-    ["AI summaries", d.ai.summaries],
+    ["Meetings", d.meetings.total, "◷", "Conversations held"],
+    ["Tasks", d.tasks.total, "✓", "Across all boards"],
+    ["Completion", `${d.tasks.completionRate}%`, "↗", "Tasks completed"],
+    ["AI summaries", d.ai.summaries, "✦", "Generated from meetings"],
   ];
 
   return (
-    <div>
-      <div className="row">
-        <h2>Dashboard</h2>
-        <button className="ghost" onClick={exportCsv}>⬇ Export CSV</button>
-      </div>
+    <div className="dashboard-page">
+      <header className="page-heading dashboard-heading">
+        <div><span className="page-eyebrow">WORKSPACE OVERVIEW</span><h2>Dashboard</h2><p className="muted">A clear view of your team’s meeting and task activity.</p></div>
+        <button className="ghost" onClick={exportCsv}><span aria-hidden="true">↓</span> Export report</button>
+      </header>
 
       <div className="stats">
-        {stats.map(([label, value]) => (
-          <div className="card stat" key={label}><span className="muted small">{label}</span><b>{value}</b></div>
+        {stats.map(([label, value, icon, caption]) => (
+          <div className="card stat dashboard-stat" key={label}>
+            <div className="dashboard-stat-top"><span>{label}</span><span className="dashboard-stat-icon" aria-hidden="true">{icon}</span></div>
+            <b>{value}</b>
+            <span className="muted small">{caption}</span>
+          </div>
         ))}
       </div>
 
-      <div className="charts">
-        <div className="card">
-          <h4>Meetings, last 14 days</h4>
+      <div className="charts dashboard-charts">
+        <section className="card dashboard-chart-card">
+          <div className="dashboard-card-heading"><div><span className="page-eyebrow">ACTIVITY</span><h3>Meetings over time</h3></div><span className="dashboard-period">Last 14 days</span></div>
           <svg viewBox="0 0 280 110" role="img" aria-label="Bar chart of meetings per day for the last 14 days">
             {days.map((x, i) => {
               const h = (x.count / max) * 80;
@@ -69,22 +73,22 @@ export default function Dashboard() {
               );
             })}
           </svg>
-        </div>
+        </section>
 
-        <div className="card">
-          <h4>Tasks by status</h4>
+        <section className="card dashboard-chart-card">
+          <div className="dashboard-card-heading"><div><span className="page-eyebrow">TEAM PROGRESS</span><h3>Task breakdown</h3></div></div>
           {STATUS.map(([key, label, color]) => (
-            <div className="hbar" key={key}>
-              <span className="small">{label} ({d.tasks.byStatus[key]})</span>
+            <div className={`hbar dashboard-hbar dashboard-hbar-${key}`} key={key}>
+              <div className="dashboard-progress-label"><span>{label}</span><b>{d.tasks.byStatus[key]}</b></div>
               <div className="track"><div style={{ width: `${(d.tasks.byStatus[key] / Math.max(1, d.tasks.total)) * 100}%`, background: color }} /></div>
             </div>
           ))}
-          <h4>AI action items</h4>
-          <div className="hbar">
-            <span className="small">Turned into tasks ({items.converted}/{items.total})</span>
+          <div className="dashboard-ai-progress">
+            <div className="dashboard-card-heading"><div><span className="page-eyebrow">AI FOLLOW-THROUGH</span><h3>Action items converted</h3></div><span className="dashboard-ai-icon" aria-hidden="true">✦</span></div>
+            <div className="dashboard-progress-label"><span>Converted to tasks</span><b>{items.converted} / {items.total}</b></div>
             <div className="track"><div style={{ width: `${(items.converted / Math.max(1, items.total)) * 100}%`, background: "#1f6bff" }} /></div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

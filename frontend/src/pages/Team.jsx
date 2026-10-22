@@ -40,40 +40,52 @@ export default function Team({ session }) {
   };
 
   return (
-    <div>
-      <h2>Team</h2>
-      <div className="row">
+    <div className="team-page">
+      <header className="page-heading team-heading">
+        <div><span className="page-eyebrow">PEOPLE & PERMISSIONS</span><h2>Your team</h2><p className="muted">{w ? `People collaborating in ${w.name}.` : "Manage the people in your workspace."}</p></div>
+        {w && <div className="team-count"><b>{w.members.length}</b><span>{w.members.length === 1 ? "member" : "members"}</span></div>}
+      </header>
+      <section className="team-workspace-picker">
+        <span className="team-picker-icon" aria-hidden="true">▦</span>
+        <div className="team-workspace-copy"><span className="page-eyebrow">CURRENT WORKSPACE</span><p className="muted small">Select which team you want to manage.</p></div>
         <select aria-label="Workspace" value={ws} onChange={(e) => setWs(e.target.value)}>
           {wss.length === 0 && <option value="">No workspace yet. Create one on the Boards page.</option>}
           {wss.map((x) => <option key={x._id} value={x._id}>{x.name}</option>)}
         </select>
-      </div>
+      </section>
       {err && <div className="err">{err}</div>}
       {msg && <div className="ok">{msg}</div>}
 
       {w && (
         <>
           {admin && (
-            <form className="card row" onSubmit={invite}>
-              <input type="email" aria-label="Teammate email" placeholder="Teammate's email (they must have signed up)" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              <select aria-label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
-              <button className="primary">Add to workspace</button>
+            <form className="team-invite-card card" onSubmit={invite}>
+              <div className="team-section-heading"><span className="team-invite-icon" aria-hidden="true">＋</span><div><h3>Invite a teammate</h3><p className="muted small">Add someone who already has an IntellMeet account.</p></div></div>
+              <div className="team-invite-fields">
+                <input type="email" aria-label="Teammate email" placeholder="teammate@company.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <select aria-label="Role" value={role} onChange={(e) => setRole(e.target.value)}>
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button className="primary">Add to workspace <span aria-hidden="true">→</span></button>
+              </div>
             </form>
           )}
-          <div className="card">
-            {w.members.map((m) => (
-              <div className="hrow" key={m.user._id}>
-                <div><b>{m.user.name}</b> {m.user._id === session.user.id && "(you)"}<div className="muted small">{m.user.email}</div></div>
-                <span className={`pill ${m.role === "admin" ? "live" : ""}`}>{m.role}{w.owner === m.user._id ? " · owner" : ""}</span>
-                {w.owner !== m.user._id && (admin || m.user._id === session.user.id) && (
-                  <button className="ghost" onClick={() => remove(m.user._id)}>{m.user._id === session.user.id ? "Leave" : "Remove"}</button>
-                )}
-              </div>
-            ))}
-          </div>
+          <section className="team-members-card card">
+            <div className="team-list-heading"><div><span className="page-eyebrow">WORKSPACE DIRECTORY</span><h3>Members</h3></div><span className="team-member-count">{w.members.length}</span></div>
+            <div className="team-member-list">
+              {w.members.map((m) => (
+                <div className="team-member-row" key={m.user._id}>
+                  <span className="team-member-avatar" aria-hidden="true">{m.user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>
+                  <div className="team-member-info"><b>{m.user.name} {m.user._id === session.user.id && <span className="team-you-label">You</span>}</b><span className="muted small">{m.user.email}</span></div>
+                  <span className={`pill ${m.role === "admin" ? "live" : ""}`}>{m.role}{w.owner === m.user._id ? " · owner" : ""}</span>
+                  {w.owner !== m.user._id && (admin || m.user._id === session.user.id) && (
+                    <button className="ghost team-member-action" onClick={() => remove(m.user._id)}>{m.user._id === session.user.id ? "Leave" : "Remove"}</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
         </>
       )}
     </div>
