@@ -47,34 +47,45 @@ export default function Boards() {
   if (open) return <Board id={open} onBack={() => setOpen(null)} />;
 
   return (
-    <div>
-      <h2>Boards</h2>
+    <div className="boards-page">
+      <header className="page-heading">
+        <div><span className="page-eyebrow">TEAM COLLABORATION</span><h2>Boards</h2><p className="muted">Plan projects, track progress, and keep everyone aligned.</p></div>
+        <span className="boards-count"><b>{boards.length}</b><small>{boards.length === 1 ? "board" : "boards"}</small></span>
+      </header>
       {err && <div className="err">{err}</div>}
-      <div className="row">
-        <select aria-label="Workspace" value={ws} onChange={(e) => setWs(e.target.value)}>
-          {wss.length === 0 && <option value="">No workspace yet</option>}
-          {wss.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
-        </select>
-        <form className="row" onSubmit={addWs}>
-          <input aria-label="New workspace name" placeholder="New workspace name" value={wsName} onChange={(e) => setWsName(e.target.value)} required minLength={2} />
-          <button className="ghost">Create workspace</button>
-        </form>
-      </div>
+      <section className="boards-workspace card">
+        <div className="boards-section-copy"><span className="boards-section-icon" aria-hidden="true">▦</span><div><h3>Workspace</h3><p className="muted small">Choose a workspace or create a new one for your team.</p></div></div>
+        <div className="boards-workspace-controls">
+          <select aria-label="Workspace" value={ws} onChange={(e) => setWs(e.target.value)}>
+            {wss.length === 0 && <option value="">No workspace yet</option>}
+            {wss.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
+          </select>
+          <form className="boards-create-workspace" onSubmit={addWs}>
+            <input aria-label="New workspace name" placeholder="New workspace name" value={wsName} onChange={(e) => setWsName(e.target.value)} required minLength={2} />
+            <button className="ghost">Create workspace</button>
+          </form>
+        </div>
+      </section>
 
       {ws && (
         <>
-          <form className="card row" onSubmit={addBoard}>
-            <input aria-label="New board name (e.g. Sprint 1)" placeholder="New board name (e.g. Sprint 1)" value={bName} onChange={(e) => setBName(e.target.value)} required minLength={2} />
-            <button className="primary">Add board</button>
+          <form className="boards-create-form card" onSubmit={addBoard}>
+            <div className="boards-section-copy"><span className="boards-section-icon" aria-hidden="true">＋</span><div><h3>Create a board</h3><p className="muted small">Set up a board for your next project or sprint.</p></div></div>
+            <div className="boards-create-fields">
+              <input aria-label="New board name (e.g. Sprint 1)" placeholder="e.g. Product launch" value={bName} onChange={(e) => setBName(e.target.value)} required minLength={2} />
+              <button className="primary">Create board <span aria-hidden="true">→</span></button>
+            </div>
           </form>
-          <div className="grid">
+          <div className="home-section-heading"><div><span className="page-eyebrow">YOUR PROJECTS</span><h3>Workspace boards</h3></div></div>
+          <div className="grid boards-grid">
             {boards.map((b) => (
               <button key={b._id} className="card boardcard" onClick={() => setOpen(b._id)}>
+                <span className="boards-card-icon" aria-hidden="true">▦</span>
                 <h4>{b.name}</h4>
-                <span className="muted small">Open board →</span>
+                <span className="muted small">Open project board <span aria-hidden="true">→</span></span>
               </button>
             ))}
-            {boards.length === 0 && <p className="muted">No boards in this workspace yet.</p>}
+            {boards.length === 0 && <div className="home-empty card"><span aria-hidden="true">▦</span><h4>Your workspace is ready</h4><p className="muted">Create a board above to start organizing work with your team.</p></div>}
           </div>
         </>
       )}

@@ -8,10 +8,10 @@ function Tile({ stream, name, muted, off, local, big }) {
   const ref = useRef();
   useEffect(() => { if (ref.current) ref.current.srcObject = stream || null; }, [stream]);
   return (
-    <div className={big ? "tile big" : "tile"}>
+    <div className={big ? "tile big room-video-tile" : "tile room-video-tile"}>
       <video ref={ref} autoPlay playsInline muted={!!local} />
       {(off || !stream) && <div className="ph">{name?.[0] || "?"}</div>}
-      <span className="tag">{name}{muted ? " 🔇" : ""}</span>
+      <span className="tag"><span className="room-live-dot" />{name}{muted ? " 🔇" : ""}</span>
     </div>
   );
 }
@@ -172,17 +172,17 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
   const thumbs = others[0] ? [mine, ...others.slice(1).map((p) => ({ stream: p.stream, name: p.name || "Guest", muted: p.muted, off: p.videoOff }))] : [];
 
   return (
-    <div className="room">
-      <section className="card stage">
-        <header>
-          <button className="ghost" onClick={onLeave}>‹</button>
-          <div><h2>{title}</h2><span className="muted small">Attendees: <b>{others.length + 1}</b></span></div>
-          {rec && <span className="rec">● Transcribing</span>}
+    <div className="room room-page">
+      <section className="card stage room-stage">
+        <header className="room-stage-header">
+          <button className="room-back" onClick={onLeave} aria-label="Leave meeting"><span aria-hidden="true">←</span></button>
+          <div className="room-title"><span className="page-eyebrow">LIVE MEETING</span><h2>{title}</h2><span className="room-participant-count"><span className="room-live-dot" />{others.length + 1} {others.length === 0 ? "person" : "people"} here</span></div>
+          {rec && <span className="rec"><span className="room-live-dot" /> Transcribing</span>}
         </header>
         {err && <div className="err">{err}</div>}
-        <Tile big {...stage} />
-        <div className="thumbs">{thumbs.map((t, i) => <Tile key={i} {...t} />)}</div>
-        <footer className="bar">
+        <div className="room-stage-surface"><Tile big {...stage} /></div>
+        {thumbs.length > 0 && <div className="thumbs room-thumbnails">{thumbs.map((t, i) => <Tile key={i} {...t} />)}</div>}
+        <footer className="bar room-controls">
           <button className="leave" onClick={onLeave}>Leave</button>
           <button className={`ctl ${mic ? "" : "off"}`} onClick={() => toggle("audio")}>{mic ? "🎤 Mute" : "🔇 Unmute"}</button>
           <button className={`ctl ${cam ? "" : "off"}`} onClick={() => toggle("video")}>{cam ? "📷 Camera off" : "📷 Camera on"}</button>
@@ -191,27 +191,32 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
         </footer>
       </section>
 
-      <aside className="card side">
-        <h3>Participants <span className="count">({others.length + 1})</span></h3>
-        <div className="plist">
-          <div>{me.name} (You) {mic ? "" : "🔇"}</div>
-          {others.map((p) => <div key={p.id}>{p.name || "Guest"} {p.muted ? "🔇" : ""}</div>)}
-        </div>
-        <h3>Chat <span className="count">({msgs.length})</span></h3>
-        <div className="chat">
-          {msgs.map((m) => (
-            <div key={m.id} className={m.senderId === me.id ? "msg mine" : "msg"}>
-              <small>{m.senderId === me.id ? "You" : m.senderName}</small>
-              {m.text}
-            </div>
-          ))}
-          <div ref={endRef} />
-        </div>
-        <div className="small muted">{typing}</div>
-        <form className="send" onSubmit={send}>
-          <input aria-label="Type your message" placeholder="Type your message" value={text} onChange={(e) => onType(e.target.value)} />
-          <button>➤</button>
-        </form>
+      <aside className="card side room-sidebar">
+        <section className="room-participants">
+          <div className="room-sidebar-heading"><div><span className="page-eyebrow">IN THIS ROOM</span><h3>Participants</h3></div><span className="room-count-badge">{others.length + 1}</span></div>
+          <div className="plist room-participant-list">
+            <div className="room-participant"><span className="room-person-avatar">{me.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><span className="room-person-info"><b>{me.name} <span className="team-you-label">You</span></b><small>{mic ? "Microphone on" : "Muted"}</small></span><span aria-label={mic ? "Microphone on" : "Muted"}>{mic ? "♩" : "×"}</span></div>
+            {others.map((p) => <div className="room-participant" key={p.id}><span className="room-person-avatar room-person-avatar-alt">{(p.name || "Guest").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><span className="room-person-info"><b>{p.name || "Guest"}</b><small>{p.muted ? "Muted" : "Microphone on"}</small></span><span aria-label={p.muted ? "Muted" : "Microphone on"}>{p.muted ? "×" : "♩"}</span></div>)}
+          </div>
+        </section>
+        <section className="room-chat-section">
+          <div className="room-sidebar-heading"><div><span className="page-eyebrow">MESSAGES</span><h3>Meeting chat</h3></div><span className="room-count-badge">{msgs.length}</span></div>
+          <div className="chat room-chat">
+            {msgs.length === 0 && <div className="room-chat-empty"><span aria-hidden="true">⌁</span><p>Messages shared here will appear in this chat.</p></div>}
+            {msgs.map((m) => (
+              <div key={m.id} className={m.senderId === me.id ? "msg mine" : "msg"}>
+                <small>{m.senderId === me.id ? "You" : m.senderName}</small>
+                {m.text}
+              </div>
+            ))}
+            <div ref={endRef} />
+          </div>
+          <div className="small muted room-typing">{typing}</div>
+          <form className="send room-send" onSubmit={send}>
+            <input aria-label="Type your message" placeholder="Write a message…" value={text} onChange={(e) => onType(e.target.value)} />
+            <button aria-label="Send message">➤</button>
+          </form>
+        </section>
       </aside>
     </div>
   );

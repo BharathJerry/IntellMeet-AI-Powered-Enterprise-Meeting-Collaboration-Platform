@@ -69,24 +69,27 @@ export default function Board({ id, onBack }) {
 
   return (
     <div>
-      <div className="row">
-        <button className="ghost" onClick={onBack} aria-label="Back to boards">‹</button>
-        <h2>{data.board.name}</h2>
-      </div>
+      <header className="board-heading">
+        <button className="ghost" onClick={onBack} aria-label="Back to boards"><span aria-hidden="true">←</span> Boards</button>
+        <div><span className="page-eyebrow">PROJECT BOARD</span><h2>{data.board.name}</h2></div>
+        <span className="board-task-total"><b>{COLS.reduce((sum, [key]) => sum + data.columns[key].length, 0)}</b> tasks</span>
+      </header>
       {err && <div className="err">{err}</div>}
-      <form className="card row" onSubmit={add}>
-        <input aria-label="Add a card" placeholder="Add a card" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} />
+      <form className="board-add-form card" onSubmit={add}>
+        <span className="board-add-icon" aria-hidden="true">＋</span>
+        <input aria-label="Add a card" placeholder="What needs to get done?" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} />
         <select aria-label="Assignee" value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-          <option value="">Unassigned</option>
+          <option value="">Assign to anyone</option>
           {members.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
         </select>
-        <button className="primary">Add</button>
+        <button className="primary">Add task <span aria-hidden="true">→</span></button>
       </form>
 
       <div className="kanban">
         {COLS.map(([key, label]) => (
-          <div key={key} className="kcol" onDragOver={(e) => e.preventDefault()} onDrop={() => drag.current && move(drag.current, key)}>
-            <h4>{label} <span className="count">({data.columns[key].length})</span></h4>
+          <div key={key} className={`kcol board-column board-column-${key}`} onDragOver={(e) => e.preventDefault()} onDrop={() => drag.current && move(drag.current, key)}>
+            <h4><span>{label}</span><span className="board-column-count">{data.columns[key].length}</span></h4>
+            <span className="board-column-hint">{key === "todo" ? "Ready to start" : key === "in_progress" ? "Currently working on" : "Completed work"}</span>
             {data.columns[key].map((t) => (
               <div
                 key={t._id}
@@ -98,7 +101,7 @@ export default function Board({ id, onBack }) {
               >
                 <div>{t.title}</div>
                 <div className="krow">
-                  <span className="small muted">{t.assignee ? t.assignee.name : "Unassigned"}</span>
+                  <span className="board-assignee"><span className="board-assignee-avatar" aria-hidden="true">{t.assignee ? t.assignee.name.slice(0, 1).toUpperCase() : "·"}</span><span className="small muted">{t.assignee ? t.assignee.name : "Unassigned"}</span></span>
                   <span>
                     <button aria-label="Move left" disabled={key === "todo"} onClick={() => shift(t, -1)}>◀</button>
                     <button aria-label="Move right" disabled={key === "done"} onClick={() => shift(t, 1)}>▶</button>
