@@ -12,6 +12,7 @@ import Boards from "./pages/Boards.jsx";
 import Team from "./pages/Team.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Profile from "./pages/Profile.jsx";
+import "./styles.css";
 import "./more.css";
 import "./more2.css";
 
