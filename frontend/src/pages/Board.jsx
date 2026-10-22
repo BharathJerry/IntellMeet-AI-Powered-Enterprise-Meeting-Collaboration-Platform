@@ -75,7 +75,7 @@ export default function Board({ id, onBack }) {
       </div>
       {err && <div className="err">{err}</div>}
       <form className="card row" onSubmit={add}>
-        <input placeholder="Add a card" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} />
+        <input aria-label="Add a card" placeholder="Add a card" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} />
         <select aria-label="Assignee" value={assignee} onChange={(e) => setAssignee(e.target.value)}>
           <option value="">Unassigned</option>
           {members.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}

@@ -4,16 +4,26 @@ import { startSocket, stopSocket } from "./socket.js";
 import Toasts from "./Toasts.jsx";
 import Login from "./pages/Login.jsx";
 import Home from "./pages/Home.jsx";
+import Lobby from "./pages/Lobby.jsx";
 import Room from "./pages/Room.jsx";
+import History from "./pages/History.jsx";
+import Details from "./pages/Details.jsx";
 import Boards from "./pages/Boards.jsx";
+import Team from "./pages/Team.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import Profile from "./pages/Profile.jsx";
 import "./more.css";
+import "./more2.css";
 
-const NAV = [["home", "🏠", "Meetings"], ["boards", "🗂", "Boards"], ["dash", "📊", "Dashboard"]];
+const NAV = [
+  ["home", "🏠", "Meetings"], ["history", "📜", "History"], ["boards", "🗂", "Boards"],
+  ["team", "👥", "Team"], ["dash", "📊", "Dashboard"],
+];
 
 export default function App() {
   const [session, setSess] = useState(getSession());
   const [page, setPage] = useState({ name: "home" });
+  const go = (name, extra = {}) => setPage({ name, ...extra });
 
   useEffect(() => {
     if (!session) return;
@@ -28,22 +38,28 @@ export default function App() {
       .catch(() => {})
       .finally(() => { setSession(null); setSess(null); });
   const initials = session.user.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const lobby = (id) => go("lobby", { id });
 
   return (
     <div className="app">
+      <a className="skip" href="#main">Skip to content</a>
       <nav className="rail" aria-label="Main">
         <div className="logo">IM</div>
         {NAV.map(([name, icon, label]) => (
-          <button key={name} className={`nav ${page.name === name ? "on" : ""}`} title={label} aria-label={label} onClick={() => setPage({ name })}>{icon}</button>
+          <button key={name} className={`nav ${page.name === name ? "on" : ""}`} title={label} aria-label={label} onClick={() => go(name)}>{icon}</button>
         ))}
-        <button className="nav" title="Sign out" aria-label="Sign out" onClick={signOut}>⏻</button>
-        <div className="me" title={session.user.name}>{initials}</div>
+        <button className="me" title="Profile" aria-label="Profile" onClick={() => go("profile")}>{initials}</button>
       </nav>
-      <main>
-        {page.name === "room" && <Room meetingId={page.id} session={session} onLeave={() => setPage({ name: "home" })} />}
-        {page.name === "home" && <Home session={session} openRoom={(id) => setPage({ name: "room", id })} />}
+      <main id="main">
+        {page.name === "home" && <Home session={session} openRoom={lobby} />}
+        {page.name === "lobby" && <Lobby meetingId={page.id} onJoin={(initial) => go("room", { id: page.id, initial })} onBack={() => go("home")} />}
+        {page.name === "room" && <Room meetingId={page.id} initial={page.initial} session={session} onLeave={() => go("home")} />}
+        {page.name === "history" && <History openDetails={(id) => go("details", { id })} />}
+        {page.name === "details" && <Details id={page.id} session={session} onBack={() => go("history")} openRoom={lobby} />}
         {page.name === "boards" && <Boards />}
+        {page.name === "team" && <Team session={session} />}
         {page.name === "dash" && <Dashboard />}
+        {page.name === "profile" && <Profile session={session} onSignOut={signOut} />}
       </main>
       <Toasts />
     </div>

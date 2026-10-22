@@ -50,11 +50,11 @@ export default function Home({ session, openRoom }) {
       <h2>Hello, {session.user.name.split(" ")[0]} 👋</h2>
       <div className="row">
         <form className="card row" onSubmit={create}>
-          <input placeholder="New meeting title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} />
+          <input aria-label="New meeting title" placeholder="New meeting title" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} />
           <button className="primary">Start meeting</button>
         </form>
         <form className="card row" onSubmit={join}>
-          <input placeholder="Join with meeting ID" value={joinId} onChange={(e) => setJoinId(e.target.value)} required />
+          <input aria-label="Join with meeting ID" placeholder="Join with meeting ID" value={joinId} onChange={(e) => setJoinId(e.target.value)} required />
           <button className="primary">Join</button>
         </form>
       </div>
