@@ -1,0 +1,4 @@
+.tile.screen{background:#000}
+.tile.screen video{object-fit:contain}
+.tile.screen .tag{background:#1f6bffcc}
+.presenting{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:#fff4e5;color:#92400e;border-radius:12px;padding:8px 12px;margin-bottom:8px}

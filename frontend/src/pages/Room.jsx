@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { api, API, getSession } from "../api.js";
+import "../present.css";
 
 const ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-function Tile({ stream, name, muted, off, local, big }) {
+function Tile({ stream, name, muted, off, local, big, screen }) {
   const ref = useRef();
   useEffect(() => { if (ref.current) ref.current.srcObject = stream || null; }, [stream]);
-  const hasVideo = stream?.getVideoTracks().some((track) => track.readyState === "live" && track.enabled);
   return (
-    <div className={big ? "tile big room-video-tile" : "tile room-video-tile"}>
+    <div className={`tile room-video-tile${big ? " big" : ""}${screen ? " screen" : ""}`}>
       <video ref={ref} autoPlay playsInline muted={!!local} />
-      {(off || !hasVideo) && <div className="ph"><span className="room-avatar-initial">{name?.[0] || "?"}</span></div>}
-      <span className="tag"><span className="room-live-dot" />{name}{muted ? " 🔇" : ""}</span>
+      {(off || !stream) && <div className="ph"><span className="room-avatar-initial">{name?.[0] || "?"}</span></div>}
+      <span className="tag">{name}{muted ? " 🔇" : ""}</span>
     </div>
   );
 }
@@ -20,7 +20,6 @@ function Tile({ stream, name, muted, off, local, big }) {
 export default function Room({ meetingId, session, onLeave, initial = {} }) {
   const me = session.user;
   const [title, setTitle] = useState("Meeting");
-  const [meetingDate, setMeetingDate] = useState("");
   const [peers, setPeers] = useState({}); // socketId -> { name, stream, muted, videoOff }
   const [local, setLocal] = useState(null);
   const [msgs, setMsgs] = useState([]);
@@ -32,13 +31,12 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
   const [err, setErr] = useState("");
   const sock = useRef(null), media = useRef(null), pcs = useRef({}), queue = useRef(Promise.resolve());
   const typingTimer = useRef(), speech = useRef(), endRef = useRef();
+  const [shareStream, setShareStream] = useState(null);
+  const shareRef = useRef(null), screenApi = useRef({});
 
   useEffect(() => {
     let dead = false;
-    api(`/meetings/${meetingId}`).then((d) => {
-      setTitle(d.meeting.title);
-      setMeetingDate(new Date(d.meeting.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }));
-    }).catch(() => {});
+    api(`/meetings/${meetingId}`).then((d) => setTitle(d.meeting.title)).catch(() => {});
 
     (async () => {
       try {
@@ -64,6 +62,7 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
       };
 
       const onSignal = async (from, data) => {
+        if (data.screen) return onScreenSignal(from, data);
         const pc = pcs.current[from] || makePc(from);
         if (data.sdp) {
           await pc.setRemoteDescription(data.sdp);
@@ -76,12 +75,80 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
         }
       };
 
+      // ---- Presenting a screen, like Google Meet ----
+      // A second connection per viewer carries the screen, so cameras keep working untouched.
+      const out = {}; // screens I send, by viewer socket id
+      const inn = {}; // screens others send me, by presenter socket id
+      const sendScreenTo = async (id) => {
+        if (out[id]) return;
+        const pc = (out[id] = new RTCPeerConnection(ICE));
+        shareRef.current.getTracks().forEach((t) => pc.addTrack(t, shareRef.current));
+        pc.onicecandidate = (e) => e.candidate && s.emit("signal", { to: id, data: { screen: "p", candidate: e.candidate } });
+        await pc.setLocalDescription(await pc.createOffer());
+        s.emit("signal", { to: id, data: { screen: "p", sdp: pc.localDescription } });
+      };
+      const onScreenSignal = async (from, data) => {
+        if (data.screen === "stop") { // the presenter stopped
+          inn[from]?.close();
+          delete inn[from];
+          return setPeers((x) => (x[from] ? { ...x, [from]: { ...x[from], screen: null } } : x));
+        }
+        if (data.screen === "v") { // a viewer answering my screen
+          const pc = out[from];
+          if (data.sdp) await pc?.setRemoteDescription(data.sdp);
+          else if (data.candidate) await pc?.addIceCandidate(data.candidate);
+          return;
+        }
+        let pc = inn[from]; // "p": someone is presenting to me
+        if (!pc) {
+          pc = inn[from] = new RTCPeerConnection(ICE);
+          pc.onicecandidate = (e) => e.candidate && s.emit("signal", { to: from, data: { screen: "v", candidate: e.candidate } });
+          pc.ontrack = (e) => setPeers((x) => ({ ...x, [from]: { ...x[from], screen: e.streams[0] } }));
+        }
+        if (data.sdp) {
+          await pc.setRemoteDescription(data.sdp);
+          await pc.setLocalDescription(await pc.createAnswer());
+          s.emit("signal", { to: from, data: { screen: "v", sdp: pc.localDescription } });
+        } else if (data.candidate) await pc.addIceCandidate(data.candidate);
+      };
+      screenApi.current = {
+        start: async () => {
+          const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }); // audio = shared tab sound
+          shareRef.current = stream;
+          setShareStream(stream);
+          stream.getVideoTracks()[0].onended = () => screenApi.current.stop(); // the browser's own "Stop sharing" bar
+          for (const id of Object.keys(pcs.current)) await sendScreenTo(id);
+        },
+        stop: () => {
+          if (!shareRef.current) return;
+          shareRef.current.getTracks().forEach((t) => t.stop());
+          shareRef.current = null;
+          setShareStream(null);
+          Object.entries(out).forEach(([id, pc]) => {
+            pc.close();
+            delete out[id];
+            s.emit("signal", { to: id, data: { screen: "stop" } });
+          });
+        },
+        closeAll: () => {
+          Object.values(out).forEach((pc) => pc.close());
+          Object.values(inn).forEach((pc) => pc.close());
+        },
+      };
+
       // handle signals one at a time so ICE candidates never overtake the offer
       s.on("signal", ({ from, data }) => { queue.current = queue.current.then(() => onSignal(from, data)).catch(() => {}); });
-      s.on("participant:joined", (p) => setPeers((x) => ({ ...x, [p.socketId]: { ...x[p.socketId], name: p.name, muted: p.muted, videoOff: p.videoOff } })));
+      s.on("participant:joined", (p) => {
+        setPeers((x) => ({ ...x, [p.socketId]: { ...x[p.socketId], name: p.name, muted: p.muted, videoOff: p.videoOff } }));
+        if (shareRef.current) sendScreenTo(p.socketId).catch(() => {});
+      });
       s.on("participant:left", ({ socketId }) => {
         pcs.current[socketId]?.close();
         delete pcs.current[socketId];
+        out[socketId]?.close();
+        delete out[socketId];
+        inn[socketId]?.close();
+        delete inn[socketId];
         setPeers((x) => { const n = { ...x }; delete n[socketId]; return n; });
       });
       s.on("media:state", (m) => setPeers((x) => (x[m.socketId] ? { ...x, [m.socketId]: { ...x[m.socketId], muted: m.muted, videoOff: m.videoOff } } : x)));
@@ -109,6 +176,8 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
       Object.values(pcs.current).forEach((pc) => pc.close());
       media.current?.getTracks().forEach((t) => t.stop());
       speech.current?.stop();
+      screenApi.current.closeAll?.();
+      shareRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, [meetingId]);
 
@@ -123,14 +192,8 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
     sock.current.emit("media:state", { muted: a ? !a.enabled : true, videoOff: v ? !v.enabled : true });
   };
 
-  const share = async () => {
-    try {
-      const screen = (await navigator.mediaDevices.getDisplayMedia({ video: true })).getVideoTracks()[0];
-      const swap = (t) => Object.values(pcs.current).forEach((pc) => pc.getSenders().find((x) => x.track?.kind === "video")?.replaceTrack(t));
-      swap(screen);
-      screen.onended = () => swap(media.current.getVideoTracks()[0] || null);
-    } catch { /* user cancelled */ }
-  };
+  const present = () =>
+    shareRef.current ? screenApi.current.stop() : screenApi.current.start().catch(() => {}); // cancelling the picker is fine
 
   // Free live transcription with the browser's speech recognition (Chrome/Edge); feeds the AI summary
   const transcribe = () => {
@@ -173,48 +236,90 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
 
   const others = Object.entries(peers).map(([id, p]) => ({ id, ...p }));
   const mine = { stream: local, name: `${me.name} (You)`, muted: !mic, off: !cam, local: true };
-  const stage = others[0] ? { stream: others[0].stream, name: others[0].name || "Guest", muted: others[0].muted, off: others[0].videoOff } : mine;
-  const thumbs = others[0] ? [mine, ...others.slice(1).map((p) => ({ stream: p.stream, name: p.name || "Guest", muted: p.muted, off: p.videoOff }))] : [];
+  const tile = (p) => ({ stream: p.stream, name: p.name || "Guest", muted: p.muted, off: p.videoOff });
+  const presenter = others.find((p) => p.screen);
+  const slide = presenter
+    ? { stream: presenter.screen, name: `${presenter.name || "Guest"} is presenting` }
+    : shareStream ? { stream: shareStream, name: "You are presenting", local: true } : null;
+  // like Google Meet: the shared screen takes the stage and everyone's camera moves to the strip below
+  const stage = slide ? { ...slide, screen: true } : others[0] ? tile(others[0]) : mine;
+  const thumbs = slide ? [mine, ...others.map(tile)] : others[0] ? [mine, ...others.slice(1).map(tile)] : [];
 
   return (
     <div className="room room-page">
       <section className="card stage room-stage">
         <header className="room-stage-header">
-          <button className="room-back" onClick={onLeave} aria-label="Leave meeting"><span aria-hidden="true">←</span></button>
-          <div className="room-title"><span className="page-eyebrow">LIVE MEETING</span><h2>{title}</h2><div className="room-meta"><span>{meetingDate || "Meeting in progress"}</span><span className="room-participant-count"><span className="room-live-dot" />{others.length + 1} {others.length === 0 ? "person" : "people"} here</span></div></div>
-          {rec && <span className="rec"><span className="room-live-dot" /> Recording transcript</span>}
+          <button className="ghost room-back" onClick={onLeave} aria-label="Back to meetings">‹</button>
+          <div className="room-title">
+            <span className="page-eyebrow">LIVE MEETING</span>
+            <h2>{title}</h2>
+            <div className="room-meta">
+              <span className="room-participant-count"><span className="room-live-dot" />Attendees: <b>{others.length + 1}</b></span>
+            </div>
+          </div>
+          {rec && <span className="rec"><span className="room-live-dot" />Transcribing</span>}
         </header>
         {err && <div className="err">{err}</div>}
+        {shareStream && (
+          <div className="presenting" role="status">
+            You are presenting your screen
+            <button className="leave" onClick={present}>Stop presenting</button>
+          </div>
+        )}
         <div className="room-stage-surface"><Tile big {...stage} /></div>
         {thumbs.length > 0 ? (
           <div className="thumbs room-thumbnails">{thumbs.map((t, i) => <Tile key={i} {...t} />)}</div>
         ) : (
           <div className="room-attendee-empty">
-            <span className="room-attendee-empty-avatar" aria-hidden="true">＋</span>
-            <span><b>Waiting for teammates</b><small>They’ll appear here when they join.</small></span>
+            <span className="room-attendee-empty-avatar">+</span>
+            <span><b>Waiting for others to join</b><small>Your meeting is ready when they are.</small></span>
           </div>
         )}
         <footer className="bar room-controls">
           <button className="leave" onClick={onLeave}>Leave</button>
           <button className={`ctl ${mic ? "" : "off"}`} onClick={() => toggle("audio")}>{mic ? "🎤 Mute" : "🔇 Unmute"}</button>
           <button className={`ctl ${cam ? "" : "off"}`} onClick={() => toggle("video")}>{cam ? "📷 Camera off" : "📷 Camera on"}</button>
-          <button className="ctl" onClick={share}>🖥 Share screen</button>
+          <button className={`ctl ${shareStream ? "off" : ""}`} onClick={present}>{shareStream ? "⏹ Stop presenting" : "🖥 Present screen"}</button>
           <button className="ctl" onClick={transcribe}>{rec ? "⏹ Stop transcript" : "📝 Transcribe"}</button>
         </footer>
       </section>
 
       <aside className="card side room-sidebar">
         <section className="room-participants">
-          <div className="room-sidebar-heading"><div><span className="page-eyebrow">IN THIS ROOM</span><h3>Participants</h3></div><span className="room-count-badge">{others.length + 1}</span></div>
+          <div className="room-sidebar-heading">
+            <div><span className="page-eyebrow">IN THIS CALL</span><h3>Participants</h3></div>
+            <span className="room-count-badge">{others.length + 1}</span>
+          </div>
           <div className="plist room-participant-list">
-            <div className="room-participant"><span className="room-person-avatar">{me.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><span className="room-person-info"><b>{me.name} <span className="team-you-label">You</span></b><small>{mic ? "Microphone on" : "Muted"}</small></span><span aria-label={mic ? "Microphone on" : "Muted"}>{mic ? "♩" : "×"}</span></div>
-            {others.map((p) => <div className="room-participant" key={p.id}><span className="room-person-avatar room-person-avatar-alt">{(p.name || "Guest").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><span className="room-person-info"><b>{p.name || "Guest"}</b><small>{p.muted ? "Muted" : "Microphone on"}</small></span><span aria-label={p.muted ? "Muted" : "Microphone on"}>{p.muted ? "×" : "♩"}</span></div>)}
+            <div className="room-participant">
+              <span className="room-person-avatar">{me.name[0]}</span>
+              <span className="room-person-info"><b>{me.name} (You)</b><small>{mic ? "Microphone on" : "Microphone off"}</small></span>
+              <span aria-label={mic ? "Microphone on" : "Microphone muted"}>{mic ? "🎙" : "🔇"}</span>
+            </div>
+            {others.map((p) => {
+              const name = p.name || "Guest";
+              return (
+                <div className="room-participant" key={p.id}>
+                  <span className="room-person-avatar room-person-avatar-alt">{name[0]}</span>
+                  <span className="room-person-info"><b>{name}</b><small>{p.muted ? "Microphone off" : "In the meeting"}</small></span>
+                  <span aria-label={p.muted ? "Microphone muted" : "Microphone on"}>{p.muted ? "🔇" : "🎙"}</span>
+                </div>
+              );
+            })}
           </div>
         </section>
         <section className="room-chat-section">
-          <div className="room-sidebar-heading"><div><span className="page-eyebrow">CONVERSATION</span><h3>Chat</h3></div><span className="room-count-badge">{msgs.length}</span></div>
-          <div className="chat room-chat">
-            {msgs.length === 0 && <div className="room-chat-empty"><span aria-hidden="true">⌁</span><p>Messages shared here will appear in this chat.</p></div>}
+          <div className="room-sidebar-heading">
+            <div><span className="page-eyebrow">MESSAGES</span><h3>Chat</h3></div>
+            <span className="room-count-badge">{msgs.length}</span>
+          </div>
+          <div className="chat room-chat" aria-live="polite">
+            {msgs.length === 0 && (
+              <div className="room-chat-empty">
+                <span>✉</span>
+                <p>No messages yet. Send a message to start the conversation.</p>
+              </div>
+            )}
             {msgs.map((m) => (
               <div key={m.id} className={m.senderId === me.id ? "msg mine" : "msg"}>
                 <small>{m.senderId === me.id ? "You" : m.senderName}</small>
@@ -223,10 +328,10 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
             ))}
             <div ref={endRef} />
           </div>
-          <div className="small muted room-typing">{typing}</div>
+          <div className="small muted room-typing" role="status">{typing}</div>
           <form className="send room-send" onSubmit={send}>
-            <input aria-label="Type your message" placeholder="Write a message…" value={text} onChange={(e) => onType(e.target.value)} />
-            <button aria-label="Send message">➤</button>
+            <input aria-label="Type your message" placeholder="Type your message" value={text} onChange={(e) => onType(e.target.value)} />
+            <button aria-label="Send message" title="Send message">➤</button>
           </form>
         </section>
       </aside>
