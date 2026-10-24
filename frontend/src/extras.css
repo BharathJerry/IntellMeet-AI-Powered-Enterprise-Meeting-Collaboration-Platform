@@ -1,0 +1,15 @@
+.me{overflow:hidden}
+.me img,.bigme img{width:100%;height:100%;object-fit:cover}
+.bigme{overflow:hidden}
+.gbtn{display:flex;justify-content:center;min-height:44px}
+.recs video{width:100%;border-radius:12px;margin-top:8px;background:#000}
+.profile form{display:flex;gap:8px;justify-content:center;margin:10px 0}
+.profile-avatar{overflow:hidden}
+.profile-avatar img{width:100%;height:100%;object-fit:cover}
+.profile-edit-form{display:grid;gap:6px;margin:0 0 16px}
+.profile-edit-form>label{color:var(--mute);font-size:12px}
+.profile-edit-form>div{display:flex;max-width:420px;gap:8px}
+.profile-edit-form input{flex:1}
+.profile-edit-form button{white-space:nowrap}
+.profile-photo-button{cursor:pointer}
+.room-controls{flex-wrap:wrap}
