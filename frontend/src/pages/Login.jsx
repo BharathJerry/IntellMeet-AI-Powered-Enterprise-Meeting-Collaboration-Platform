@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 
 export default function Login({ onAuth }) {
@@ -17,6 +17,30 @@ export default function Login({ onAuth }) {
       setErr(e2.message);
     }
   };
+
+  const gbtn = useRef();
+  const googleId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  console.log("Google client ID:", googleId);
+
+  useEffect(() => {
+    if (!googleId) return;
+    const init = () => {
+      window.google.accounts.id.initialize({
+        client_id: googleId,
+        callback: async (r) => {
+          try { onAuth(await api("/auth/google", { method: "POST", body: { credential: r.credential } })); }
+          catch (e) { setErr(e.message); }
+        },
+      });
+      window.google.accounts.id.renderButton(gbtn.current, { theme: "outline", size: "large", width: 300 });
+    };
+    if (window.google?.accounts) return init();
+    const sc = document.createElement("script");
+    sc.src = "https://accounts.google.com/gsi/client";
+    sc.async = true;
+    sc.onload = init;
+    document.head.appendChild(sc);
+  }, []);
 
   // Demo account for judges: logs in, or creates it on first use
   const demo = async () => {
@@ -43,6 +67,7 @@ export default function Login({ onAuth }) {
         <button type="button" className="link" onClick={() => setMode(mode === "login" ? "signup" : "login")}>
           {mode === "login" ? "New here? Sign up" : "Have an account? Log in"}
         </button>
+        {googleId && <div ref={gbtn} className="gbtn" />}
         <div className="demo">
           <button type="button" className="ghost" onClick={demo}>▶ Try the demo account</button>
           <ol className="small muted">

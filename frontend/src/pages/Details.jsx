@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { toast } from "../toast.js";
+import Recordings from "./Recordings.jsx";
 
 export default function Details({ id, session, onBack, openRoom }) {
   const [m, setM] = useState(null);
@@ -80,6 +81,8 @@ export default function Details({ id, session, onBack, openRoom }) {
           <pre className="transcript" tabIndex={0}>{m.transcript || "No transcript recorded. Use Transcribe inside the meeting room."}</pre>
         </section>
       </div>
+
+      <Recordings id={id} />
     </div>
   );
 }

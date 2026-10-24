@@ -15,6 +15,7 @@ import Profile from "./pages/Profile.jsx";
 import "./styles.css";
 import "./more.css";
 import "./more2.css";
+import "./extras.css";
 
 const NAV = [
   ["home", "⌂", "Meetings"], ["history", "◷", "History"], ["boards", "▦", "Boards"],
@@ -49,7 +50,7 @@ export default function App() {
         {NAV.map(([name, icon, label]) => (
           <button key={name} className={`nav ${page.name === name ? "on" : ""}`} title={label} aria-label={label} onClick={() => go(name)}>{icon}</button>
         ))}
-        <button className="me" title="Profile" aria-label="Profile" onClick={() => go("profile")}>{initials}</button>
+        <button className="me" title="Profile" aria-label="Profile" onClick={() => go("profile")}>{session.user.avatar ? <img src={session.user.avatar} alt="" /> : initials}</button>
       </nav>
       <main id="main">
         {page.name === "home" && <Home session={session} openRoom={lobby} />}
@@ -60,7 +61,7 @@ export default function App() {
         {page.name === "boards" && <Boards />}
         {page.name === "team" && <Team session={session} />}
         {page.name === "dash" && <Dashboard />}
-        {page.name === "profile" && <Profile session={session} onSignOut={signOut} />}
+        {page.name === "profile" && <Profile session={session} onSignOut={signOut} onUser={(u) => { const next = { ...session, user: u }; setSession(next); setSess(next); }} />}
       </main>
       <Toasts />
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { api, API, getSession } from "../api.js";
 import "../present.css";
+import { toast } from "../toast.js";
 
 const ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
@@ -33,6 +34,9 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
   const typingTimer = useRef(), speech = useRef(), endRef = useRef();
   const [shareStream, setShareStream] = useState(null);
   const shareRef = useRef(null), screenApi = useRef({});
+  const [recording, setRecording] = useState(false);
+  const [recorders, setRecorders] = useState({}); // userId -> name, for other people recording
+  const recorder = useRef(null);
 
   useEffect(() => {
     let dead = false;
@@ -154,6 +158,10 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
       s.on("media:state", (m) => setPeers((x) => (x[m.socketId] ? { ...x, [m.socketId]: { ...x[m.socketId], muted: m.muted, videoOff: m.videoOff } } : x)));
       s.on("chat:message", (m) => setMsgs((x) => [...x, m]));
       s.on("chat:typing", (t) => setTyping(t.isTyping ? `${t.name} is typing…` : ""));
+      s.on("recording:state", (r) => {
+        setRecorders((x) => { const n = { ...x }; r.recording ? (n[r.userId] = r.name) : delete n[r.userId]; return n; });
+        toast(r.recording ? `🔴 ${r.name} started recording` : `${r.name} stopped recording`);
+      });
       s.on("connect_error", (e) => setErr(e.message));
 
       s.emit("meeting:join", { meetingId }, async (res) => {
@@ -176,6 +184,7 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
       Object.values(pcs.current).forEach((pc) => pc.close());
       media.current?.getTracks().forEach((t) => t.stop());
       speech.current?.stop();
+      if (recorder.current?.state === "recording") recorder.current.stop();
       screenApi.current.closeAll?.();
       shareRef.current?.getTracks().forEach((t) => t.stop());
     };
@@ -219,6 +228,38 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
     setRec(true);
   };
 
+  // Records this tab (everyone's video and voices) plus your own microphone, then saves it to the meeting
+  const toggleRecord = async () => {
+    if (recorder.current) return recorder.current.stop();
+    try {
+      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true, preferCurrentTab: true });
+      const ctx = new AudioContext();
+      const mix = ctx.createMediaStreamDestination();
+      [screen, media.current].forEach((st) => st.getAudioTracks().length && ctx.createMediaStreamSource(new MediaStream(st.getAudioTracks())).connect(mix));
+      const stream = new MediaStream([...screen.getVideoTracks(), ...mix.stream.getAudioTracks()]);
+      const type = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus") ? "video/webm;codecs=vp9,opus" : "video/webm";
+      const rec = new MediaRecorder(stream, { mimeType: type });
+      const chunks = [];
+      rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+      rec.onstop = async () => {
+        screen.getTracks().forEach((t) => t.stop());
+        ctx.close();
+        recorder.current = null;
+        setRecording(false);
+        sock.current?.emit("recording:state", { recording: false });
+        try {
+          await api(`/meetings/${meetingId}/recordings`, { method: "POST", body: new Blob(chunks, { type: "video/webm" }) });
+          toast("✅ Recording saved. Find it under the meeting's details.");
+        } catch (e) { setErr(`Recording not saved: ${e.message}`); }
+      };
+      screen.getVideoTracks()[0].onended = () => rec.state !== "inactive" && rec.stop(); // browser's own "Stop sharing"
+      rec.start(1000);
+      recorder.current = rec;
+      setRecording(true);
+      sock.current.emit("recording:state", { recording: true });
+    } catch { /* picker cancelled */ }
+  };
+
   const onType = (v) => {
     setText(v);
     sock.current.emit("chat:typing", { isTyping: true });
@@ -258,6 +299,9 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
             </div>
           </div>
           {rec && <span className="rec"><span className="room-live-dot" />Transcribing</span>}
+          {(recording || Object.keys(recorders).length > 0) && (
+            <span className="rec"><span className="room-live-dot" />Recording{recording ? "" : ` (${Object.values(recorders).join(", ")})`}</span>
+          )}
         </header>
         {err && <div className="err">{err}</div>}
         {shareStream && (
@@ -281,6 +325,7 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
           <button className={`ctl ${cam ? "" : "off"}`} onClick={() => toggle("video")}>{cam ? "📷 Camera off" : "📷 Camera on"}</button>
           <button className={`ctl ${shareStream ? "off" : ""}`} onClick={present}>{shareStream ? "⏹ Stop presenting" : "🖥 Present screen"}</button>
           <button className="ctl" onClick={transcribe}>{rec ? "⏹ Stop transcript" : "📝 Transcribe"}</button>
+          <button className={`ctl ${recording ? "off" : ""}`} onClick={toggleRecord}>{recording ? "⏹ Stop recording" : "⏺ Record"}</button>
         </footer>
       </section>
 
@@ -320,14 +365,14 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
                 <p>No messages yet. Send a message to start the conversation.</p>
               </div>
             )}
-            {msgs.map((m) => (
-              <div key={m.id} className={m.senderId === me.id ? "msg mine" : "msg"}>
-                <small>{m.senderId === me.id ? "You" : m.senderName}</small>
-                {m.text}
-              </div>
-            ))}
-            <div ref={endRef} />
-          </div>
+          {msgs.map((m) => (
+            <div key={m.id} className={m.senderId === me.id ? "msg mine" : "msg"}>
+              <small>{m.senderId === me.id ? "You" : m.senderName}</small>
+              {m.text}
+            </div>
+          ))}
+          <div ref={endRef} />
+        </div>
           <div className="small muted room-typing" role="status">{typing}</div>
           <form className="send room-send" onSubmit={send}>
             <input aria-label="Type your message" placeholder="Type your message" value={text} onChange={(e) => onType(e.target.value)} />
