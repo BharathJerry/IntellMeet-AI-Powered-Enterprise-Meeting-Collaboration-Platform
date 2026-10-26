@@ -1,0 +1,23 @@
+# Render Blueprint: New > Blueprint > pick this repo. Fill the two "sync: false" values when asked.
+services:
+  - type: web
+    name: intellmeet-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AI_MODE
+        value: mock
+      - key: MONGO_URI
+        sync: false          # your Atlas connection string, ending in /intellmeet
+      - key: CLIENT_URL
+        sync: false          # your Vercel URL, no trailing slash
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
