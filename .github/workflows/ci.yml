@@ -46,4 +46,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build ./backend
-      - run: docker build ./frontend --build-arg VITE_API_URL=https://example.com
+      - run: docker build ./frontend --build-arg VITE_API_URL=https://intellMeet.com
