@@ -17,6 +17,8 @@ const meetingSchema = new mongoose.Schema(
     transcript: { type: String, default: "" },
     summary: { type: String, default: "" },
     aiStatus: { type: String, enum: ["none", "pending", "done", "failed"], default: "none" },
+    inviteCode: { type: String, unique: true, sparse: true },
+    reminderSentFor: Date,
     actionItems: [actionItemSchema],
   },
   { timestamps: true }

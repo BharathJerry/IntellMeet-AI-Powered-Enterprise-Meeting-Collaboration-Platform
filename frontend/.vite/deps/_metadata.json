@@ -1,0 +1,34 @@
+{
+  "hash": "b10ead1f",
+  "configHash": "8a3e2145",
+  "lockfileHash": "23072cb2",
+  "browserHash": "df305a90",
+  "optimized": {
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "469fc786",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "9464d5d8",
+      "needsInterop": true
+    },
+    "socket.io-client": {
+      "src": "../../node_modules/socket.io-client/build/esm/index.js",
+      "file": "socket__io-client.js",
+      "fileHash": "4cbe9dc2",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-ELLFCOGW": {
+      "file": "chunk-ELLFCOGW.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
+}
