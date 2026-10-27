@@ -12,6 +12,7 @@ import Boards from "./pages/Boards.jsx";
 import Team from "./pages/Team.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Profile from "./pages/Profile.jsx";
+import Invite from "./pages/Invite.jsx";
 import "./styles.css";
 import "./more.css";
 import "./more2.css";
@@ -24,8 +25,17 @@ const NAV = [
 
 export default function App() {
   const [session, setSess] = useState(getSession());
-  const [page, setPage] = useState({ name: "home" });
+  const [page, setPage] = useState(() => {
+    const code = new URLSearchParams(window.location.search).get("invite");
+    return code ? { name: "invite", code } : { name: "home" };
+  });
   const go = (name, extra = {}) => setPage({ name, ...extra });
+  const dismissInvite = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("invite");
+    window.history.replaceState({}, "", url);
+    go("home");
+  };
 
   useEffect(() => {
     if (!session) return;
@@ -62,6 +72,7 @@ export default function App() {
         {page.name === "team" && <Team session={session} />}
         {page.name === "dash" && <Dashboard />}
         {page.name === "profile" && <Profile session={session} onSignOut={signOut} onUser={(u) => { const next = { ...session, user: u }; setSession(next); setSess(next); }} />}
+        {page.name === "invite" && <Invite code={page.code} onBack={dismissInvite} openRoom={lobby} />}
       </main>
       <Toasts />
     </div>

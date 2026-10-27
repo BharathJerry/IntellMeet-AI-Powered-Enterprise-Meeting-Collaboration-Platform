@@ -1,26 +1,44 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 
+const toLocalDateTime = (value) => {
+  const date = value ? new Date(value) : new Date();
+  if (!value) date.setMinutes(date.getMinutes() + 1);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
+
 export default function Home({ session, openRoom }) {
   const [meetings, setMeetings] = useState([]);
   const [title, setTitle] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [joinId, setJoinId] = useState("");
   const [info, setInfo] = useState({}); // meetingId -> summary data
   const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [editingId, setEditingId] = useState("");
+  const [editTime, setEditTime] = useState("");
 
   const run = (fn) => async (...a) => {
     setMsg("");
-    try { await fn(...a); } catch (e) { setMsg(e.message); }
+    setErr("");
+    try { await fn(...a); } catch (e) { setErr(e.message); }
   };
 
-  const load = run(async () => setMeetings((await api("/meetings?limit=50")).meetings));
-  useEffect(() => { load(); }, []);
+  const load = async () => setMeetings((await api("/meetings?limit=50")).meetings);
+  useEffect(() => { load().catch((error) => setErr(error.message)); }, []);
 
   const create = run(async (e) => {
     e.preventDefault();
-    const d = await api("/meetings", { method: "POST", body: { title } });
+    const body = { title };
+    if (scheduledAt) body.scheduledAt = new Date(scheduledAt).toISOString();
+    const d = await api("/meetings", { method: "POST", body });
     setTitle("");
-    openRoom(d.meeting._id);
+    setScheduledAt("");
+    if (scheduledAt) {
+      await load();
+      setMsg("Meeting scheduled.");
+    } else openRoom(d.meeting._id);
   });
 
   const join = run(async (e) => {
@@ -28,6 +46,28 @@ export default function Home({ session, openRoom }) {
     const id = joinId.trim();
     await api(`/meetings/${id}/join`, { method: "POST" });
     openRoom(id);
+  });
+
+  const share = run(async (id) => {
+    const { code } = await api(`/meetings/${id}/invite`, { method: "POST" });
+    const link = new URL(window.location.href);
+    link.search = "";
+    link.hash = "";
+    link.searchParams.set("invite", code);
+    await navigator.clipboard.writeText(link.toString());
+    setMsg("Invitation link copied to clipboard.");
+  });
+
+  const reschedule = run(async (e, id) => {
+    e.preventDefault();
+    await api(`/meetings/${id}`, {
+      method: "PATCH",
+      body: { scheduledAt: new Date(editTime).toISOString() },
+    });
+    setEditingId("");
+    setEditTime("");
+    await load();
+    setMsg("Meeting rescheduled.");
   });
 
   // Starts the AI job, then checks every second until it finishes
@@ -56,16 +96,17 @@ export default function Home({ session, openRoom }) {
         <div className="home-meeting-count"><b>{meetings.length}</b><span>recent meetings</span></div>
       </header>
 
-      <section className="home-actions" aria-label="Start or join a meeting">
+      <section className="home-actions" aria-label="Schedule, start, or join a meeting">
         <form className="home-action-card home-start" onSubmit={create}>
           <span className="home-action-icon" aria-hidden="true">＋</span>
           <div className="home-action-copy">
-            <h3>Start a meeting</h3>
-            <p>Start a new conversation with your team.</p>
+            <h3>{scheduledAt ? "Schedule a meeting" : "Start a meeting"}</h3>
+            <p>Start now or choose a date and time for later.</p>
           </div>
           <div className="home-action-form">
             <input aria-label="New meeting title" placeholder="Give your meeting a name" value={title} onChange={(e) => setTitle(e.target.value)} required minLength={2} />
-            <button className="primary">Start meeting <span aria-hidden="true">→</span></button>
+            <input aria-label="Meeting date and time (optional)" type="datetime-local" min={toLocalDateTime()} value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+            <button className="primary">{scheduledAt ? "Schedule meeting" : "Start meeting"} <span aria-hidden="true">→</span></button>
           </div>
         </form>
         <form className="home-action-card home-join" onSubmit={join}>
@@ -80,7 +121,8 @@ export default function Home({ session, openRoom }) {
           </div>
         </form>
       </section>
-      {msg && <div className="err">{msg}</div>}
+      {err && <div className="err" role="alert">{err}</div>}
+      {msg && <div className="home-feedback" role="status">{msg}</div>}
 
       <div className="home-section-heading">
         <div><span className="page-eyebrow">STAY IN THE LOOP</span><h3>Your meetings</h3></div>
@@ -97,10 +139,23 @@ export default function Home({ session, openRoom }) {
               </div>
               <h4>{m.title}</h4>
               <p className="muted small home-meeting-id">Meeting ID <span>{m._id}</span></p>
+              {m.scheduledAt && <p className="home-scheduled-time">Scheduled for {new Date(m.scheduledAt).toLocaleString()}</p>}
               <div className="home-meeting-buttons">
                 {m.status !== "ended" && <button className="primary" onClick={() => openRoom(m._id)}>Open room</button>}
+                {m.status !== "ended" && <button className="ghost" onClick={() => share(m._id)}>Share invite</button>}
+                {m.host === session.user.id && m.status !== "ended" && <button className="ghost" onClick={() => {
+                  setEditingId(editingId === m._id ? "" : m._id);
+                  setEditTime(toLocalDateTime(m.scheduledAt));
+                }}>{editingId === m._id ? "Cancel" : m.scheduledAt ? "Reschedule" : "Set time"}</button>}
                 {m.host === session.user.id && <button className="ghost" onClick={() => summarize(m._id)}>AI summary</button>}
               </div>
+              {editingId === m._id && (
+                <form className="home-reschedule-form" onSubmit={(e) => reschedule(e, m._id)}>
+                  <label htmlFor={`reschedule-${m._id}`}>New date and time</label>
+                  <input id={`reschedule-${m._id}`} type="datetime-local" min={toLocalDateTime()} value={editTime} onChange={(e) => setEditTime(e.target.value)} required />
+                  <button className="primary">Save time</button>
+                </form>
+              )}
               {d && (
                 <div className="summary">
                   <p>{d.aiStatus === "failed" ? "Summary failed. Check the transcript." : d.summary}</p>
