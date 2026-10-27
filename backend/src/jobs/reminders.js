@@ -1,7 +1,5 @@
 import Meeting from "../models/Meeting.js";
 import { notifyUser } from "../socket/index.js";
-
-const WINDOW_MS = 10 * 60 * 1000;
 const WINDOW_MS = 10 * 60 * 1000; // remind 10 minutes before the start
 // "reminder already sent for this start time" - changing the time re-arms the reminder
 const notYetReminded = { $expr: { $ne: ["$reminderSentFor", "$scheduledAt"] } };
