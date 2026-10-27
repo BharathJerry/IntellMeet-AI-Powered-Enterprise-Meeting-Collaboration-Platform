@@ -12,6 +12,7 @@ import analyticsRoutes from "./routes/analytics.routes.js";
 import oauthRoutes from "./routes/oauth.routes.js";
 import recordingRoutes from "./routes/recording.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import inviteRoutes from "./routes/invite.routes.js";
 
 const app = express();
 
@@ -30,6 +31,8 @@ app.use("/api/v1/analytics", analyticsRoutes);
 app.use("/api/v1/auth", oauthRoutes);
 app.use("/api/v1/meetings", recordingRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/meetings", inviteRoutes);
+
 
 app.use(notFound);
 
