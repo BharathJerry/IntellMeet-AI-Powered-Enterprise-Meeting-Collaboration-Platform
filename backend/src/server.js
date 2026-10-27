@@ -5,6 +5,7 @@ import app from "./app.js";
 import { connectDB } from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
 import { initSocket } from "./socket/index.js";
+import { startReminders } from "./jobs/reminders.js";
 
 const port = process.env.PORT || 5000;
 const server = http.createServer(app);
@@ -24,6 +25,8 @@ async function start() {
   }
 
   server.listen(port, () => console.log(`API + sockets running on :${port}`));
+  startReminders();
+
 }
 
 start().catch((err) => {
