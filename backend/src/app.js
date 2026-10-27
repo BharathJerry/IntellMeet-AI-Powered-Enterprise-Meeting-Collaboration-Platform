@@ -32,6 +32,9 @@ app.use("/api/v1/meetings", recordingRoutes);
 app.use("/api/v1/users", userRoutes);
 
 app.use(notFound);
+
 app.use(errorHandler);
+
+app.set("trust proxy", 1); // Render sits behind one proxy, so use the visitor's real IP
 
 export default app;
