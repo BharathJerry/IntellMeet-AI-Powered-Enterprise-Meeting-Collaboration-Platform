@@ -16,6 +16,7 @@ export default function Home({ session, openRoom }) {
   const [info, setInfo] = useState({}); // meetingId -> summary data
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState("");
   const [editTime, setEditTime] = useState("");
 
@@ -25,7 +26,14 @@ export default function Home({ session, openRoom }) {
     try { await fn(...a); } catch (e) { setErr(e.message); }
   };
 
-  const load = async () => setMeetings((await api("/meetings?limit=50")).meetings);
+  const load = async () => {
+    setLoading(true);
+    try {
+      setMeetings((await api("/meetings?limit=50")).meetings);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => { load().catch((error) => setErr(error.message)); }, []);
 
   const create = run(async (e) => {
@@ -93,7 +101,7 @@ export default function Home({ session, openRoom }) {
           <h2>Hello, {session.user.name.split(" ")[0]} 👋</h2>
           <p className="muted">Bring your team together and keep great work moving.</p>
         </div>
-        <div className="home-meeting-count"><b>{meetings.length}</b><span>recent meetings</span></div>
+        <div className="home-meeting-count"><b>{loading ? "—" : meetings.length}</b><span>recent meetings</span></div>
       </header>
 
       <section className="home-actions" aria-label="Schedule, start, or join a meeting">
@@ -128,7 +136,7 @@ export default function Home({ session, openRoom }) {
         <div><span className="page-eyebrow">STAY IN THE LOOP</span><h3>Your meetings</h3></div>
         <span className="muted small">{meetings.length} {meetings.length === 1 ? "meeting" : "meetings"}</span>
       </div>
-      <div className="grid home-meetings">
+      <div className="grid home-meetings" aria-busy={loading}>
         {meetings.map((m) => {
           const d = info[m._id];
           return (
@@ -158,15 +166,22 @@ export default function Home({ session, openRoom }) {
               )}
               {d && (
                 <div className="summary">
+                  <div className="summary-heading"><span className="page-eyebrow">MEETING RECAP</span><b>AI summary</b></div>
                   <p>{d.aiStatus === "failed" ? "Summary failed. Check the transcript." : d.summary}</p>
-                  {d.actionItems.map((a, i) => <div key={i} className="small">• {a.task}</div>)}
-                  {d.actionItems.length > 0 && <button className="ghost" onClick={() => makeTasks(m._id)}>Make tasks</button>}
+                  {d.actionItems.length > 0 && (
+                    <div className="summary-next-steps">
+                      <span className="summary-label">Next steps · {d.actionItems.length}</span>
+                      {d.actionItems.map((a, i) => <div key={i} className="small summary-action-item"><span aria-hidden="true">•</span>{a.task}</div>)}
+                      <button className="ghost" onClick={() => makeTasks(m._id)}>Create tasks <span aria-hidden="true">→</span></button>
+                    </div>
+                  )}
                 </div>
               )}
             </article>
           );
         })}
-        {meetings.length === 0 && <div className="home-empty card"><span aria-hidden="true">◷</span><h4>No meetings yet</h4><p className="muted">Start a new meeting above and your recent conversations will show up here.</p></div>}
+        {loading && meetings.length === 0 && <div className="home-empty card" role="status"><span className="history-loading-mark" aria-hidden="true" /><p className="muted">Loading your meetings…</p></div>}
+        {!loading && !err && meetings.length === 0 && <div className="home-empty card"><span aria-hidden="true">◷</span><h4>No meetings yet</h4><p className="muted">Start a new meeting above and your recent conversations will show up here.</p></div>}
       </div>
     </div>
   );
