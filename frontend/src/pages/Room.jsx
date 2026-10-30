@@ -319,13 +319,13 @@ export default function Room({ meetingId, session, onLeave, initial = {} }) {
             <span><b>Waiting for others to join</b><small>Your meeting is ready when they are.</small></span>
           </div>
         )}
-        <footer className="bar room-controls">
-          <button className="leave" onClick={onLeave}>Leave</button>
-          <button className={`ctl ${mic ? "" : "off"}`} onClick={() => toggle("audio")}>{mic ? "🎤 Mute" : "🔇 Unmute"}</button>
-          <button className={`ctl ${cam ? "" : "off"}`} onClick={() => toggle("video")}>{cam ? "📷 Camera off" : "📷 Camera on"}</button>
-          <button className={`ctl ${shareStream ? "off" : ""}`} onClick={present}>{shareStream ? "⏹ Stop presenting" : "🖥 Present screen"}</button>
-          <button className="ctl" onClick={transcribe}>{rec ? "⏹ Stop transcript" : "📝 Transcribe"}</button>
-          <button className={`ctl ${recording ? "off" : ""}`} onClick={toggleRecord}>{recording ? "⏹ Stop recording" : "⏺ Record"}</button>
+        <footer className="bar room-controls" aria-label="Meeting controls">
+          <button className="leave" onClick={onLeave}>Leave meeting</button>
+          <button className={`ctl ${mic ? "" : "off"}`} aria-pressed={!mic} onClick={() => toggle("audio")}>{mic ? "🎤 Mute" : "🔇 Unmute"}</button>
+          <button className={`ctl ${cam ? "" : "off"}`} aria-pressed={!cam} onClick={() => toggle("video")}>{cam ? "📷 Camera off" : "📷 Camera on"}</button>
+          <button className={`ctl ${shareStream ? "off" : ""}`} aria-pressed={!!shareStream} onClick={present}>{shareStream ? "⏹ Stop presenting" : "🖥 Present screen"}</button>
+          <button className={`ctl ${rec ? "off" : ""}`} aria-pressed={rec} onClick={transcribe}>{rec ? "⏹ Stop transcript" : "📝 Transcribe"}</button>
+          <button className={`ctl ${recording ? "off" : ""}`} aria-pressed={recording} onClick={toggleRecord}>{recording ? "⏹ Stop recording" : "⏺ Record"}</button>
         </footer>
       </section>
 

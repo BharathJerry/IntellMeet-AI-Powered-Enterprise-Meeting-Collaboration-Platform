@@ -9,6 +9,7 @@ export default function Board({ id, onBack }) {
   const [title, setTitle] = useState("");
   const [assignee, setAssignee] = useState("");
   const [err, setErr] = useState("");
+  const [dragOver, setDragOver] = useState("");
   const drag = useRef(null);
 
   const load = () => api(`/boards/${id}`).then(setData).catch((e) => setErr(e.message));
@@ -65,7 +66,7 @@ export default function Board({ id, onBack }) {
     try { await api(`/boards/${id}/tasks/${t._id}`, { method: "DELETE" }); load(); } catch (e) { setErr(e.message); }
   };
 
-  if (!data) return <p className="muted">{err || "Loading board…"}</p>;
+  if (!data) return <div className="board-loading" role={err ? "alert" : "status"}>{err || "Loading board…"}</div>;
 
   return (
     <div>
@@ -87,7 +88,20 @@ export default function Board({ id, onBack }) {
 
       <div className="kanban">
         {COLS.map(([key, label]) => (
-          <div key={key} className={`kcol board-column board-column-${key}`} onDragOver={(e) => e.preventDefault()} onDrop={() => drag.current && move(drag.current, key)}>
+          <div
+            key={key}
+            className={`kcol board-column board-column-${key}${dragOver === key ? " is-drag-over" : ""}`}
+            role="region"
+            aria-label={`${label} tasks`}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(key); }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) setDragOver("");
+            }}
+            onDrop={() => {
+              if (drag.current) move(drag.current, key);
+              setDragOver("");
+            }}
+          >
             <h4><span>{label}</span><span className="board-column-count">{data.columns[key].length}</span></h4>
             <span className="board-column-hint">{key === "todo" ? "Ready to start" : key === "in_progress" ? "Currently working on" : "Completed work"}</span>
             {data.columns[key].map((t) => (
@@ -95,7 +109,8 @@ export default function Board({ id, onBack }) {
                 key={t._id}
                 className="kcard"
                 draggable
-                onDragStart={() => (drag.current = t)}
+                onDragStart={() => { drag.current = t; setDragOver(key); }}
+                onDragEnd={() => { drag.current = null; setDragOver(""); }}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.stopPropagation(); drag.current && move(drag.current, key, t._id); }}
               >
