@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 
-const STATUS = [["todo", "To Do", "#8a8fa8"], ["in_progress", "In Progress", "#7367f0"], ["done", "Done", "#22c55e"]];
+const STATUS = [["todo", "To Do", "#8a95a6"], ["in_progress", "In Progress", "#356ae6"], ["done", "Done", "#16845b"]];
 
 export default function Dashboard() {
   const [d, setD] = useState(null);
@@ -67,7 +67,7 @@ export default function Dashboard() {
               const h = (x.count / max) * 80;
               return (
                 <g key={x.date}>
-                  <rect x={i * 20 + 2} y={90 - h} width="14" height={h} rx="3" fill="#7367f0"><title>{x.date}: {x.count}</title></rect>
+                  <rect x={i * 20 + 2} y={90 - h} width="14" height={h} rx="3" fill="#356ae6"><title>{x.date}: {x.count}</title></rect>
                   <text x={i * 20 + 9} y="104" fontSize="7" textAnchor="middle" fill="#8a8fa8">{x.date.slice(8)}</text>
                 </g>
               );
@@ -86,7 +86,7 @@ export default function Dashboard() {
           <div className="dashboard-ai-progress">
             <div className="dashboard-card-heading"><div><span className="page-eyebrow">AI FOLLOW-THROUGH</span><h3>Action items converted</h3></div><span className="dashboard-ai-icon" aria-hidden="true">✦</span></div>
             <div className="dashboard-progress-label"><span>Converted to tasks</span><b>{items.converted} / {items.total}</b></div>
-            <div className="track"><div style={{ width: `${(items.converted / Math.max(1, items.total)) * 100}%`, background: "#1f6bff" }} /></div>
+            <div className="track"><div style={{ width: `${(items.converted / Math.max(1, items.total)) * 100}%`, background: "#356ae6" }} /></div>
           </div>
         </section>
       </div>

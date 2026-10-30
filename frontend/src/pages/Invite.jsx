@@ -31,31 +31,51 @@ export default function Invite({ code, onBack, openRoom }) {
 
   return (
     <div className="invite-page">
-      <button className="lobby-back" onClick={onBack}><span aria-hidden="true">←</span> Back to meetings</button>
-      <section className="invite-card card">
-        <span className="page-eyebrow">MEETING INVITATION</span>
+      <button className="lobby-back invite-back" onClick={onBack}><span aria-hidden="true">←</span> Back to meetings</button>
+      <section className="invite-card card" aria-labelledby="invite-title">
+        <div className="invite-brand" aria-hidden="true"><span>IM</span></div>
+        <div className="invite-content">
+          <span className="page-eyebrow">MEETING INVITATION</span>
         {err ? (
-          <>
-            <h2>This invitation isn’t available</h2>
+          <div className="invite-state invite-error-state">
+            <span className="invite-state-icon" aria-hidden="true">!</span>
+            <h2 id="invite-title">This invitation isn’t available</h2>
             <p className="err" role="alert">{err}</p>
-            <button className="ghost" onClick={onBack}>Return to meetings</button>
-          </>
+            <button className="ghost" onClick={onBack}>Return to meetings <span aria-hidden="true">→</span></button>
+          </div>
         ) : !meeting ? (
-          <div className="dashboard-loading"><span className="history-loading-mark" aria-hidden="true" /><p className="muted">Checking your invitation…</p></div>
+          <div className="invite-state" role="status">
+            <span className="history-loading-mark" aria-hidden="true" />
+            <h2 id="invite-title">Checking your invitation</h2>
+            <p className="muted">Confirming the meeting details…</p>
+          </div>
         ) : (
-          <>
-            <h2>{meeting.title}</h2>
-            <p className="muted">Hosted by {meeting.host}</p>
-            {meeting.scheduledAt && <p className="invite-time">Scheduled for {new Date(meeting.scheduledAt).toLocaleString()}</p>}
-            <span className={`pill ${meeting.status}`}>{meeting.status}</span>
+          <div className="invite-state">
+            <h2 id="invite-title">{meeting.title}</h2>
+            <p className="invite-description">You’ve been invited to join this meeting.</p>
+            <div className="invite-meta">
+              <div className="invite-host">
+                <span className="invite-meta-icon" aria-hidden="true">{meeting.host?.[0]?.toUpperCase() || "H"}</span>
+                <span><small>Hosted by</small><b>{meeting.host}</b></span>
+              </div>
+              <span className={`pill ${meeting.status}`}><span className="invite-status-dot" aria-hidden="true" />{meeting.status}</span>
+              {meeting.scheduledAt && (
+                <div className="invite-schedule">
+                  <span className="invite-meta-icon" aria-hidden="true">◷</span>
+                  <span><small>Scheduled for</small><b>{new Date(meeting.scheduledAt).toLocaleString()}</b></span>
+                </div>
+              )}
+            </div>
             <div className="invite-actions">
               <button className="primary" onClick={join} disabled={joining}>
                 {joining ? "Joining…" : "Join meeting"} <span aria-hidden="true">→</span>
               </button>
               <button className="ghost" onClick={onBack}>Not now</button>
             </div>
-          </>
+            <p className="invite-footnote"><span aria-hidden="true">◈</span> Your camera and microphone stay under your control.</p>
+          </div>
         )}
+        </div>
       </section>
     </div>
   );
