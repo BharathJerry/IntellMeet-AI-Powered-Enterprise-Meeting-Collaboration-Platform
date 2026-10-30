@@ -12,9 +12,9 @@ Real-time video meetings, AI summaries with action items, team boards and analyt
 
 ## Screenshots
 
-| Meeting room | Boards | Dashboard |
-|---|---|---|
-| ![room](docs/screenshots/room.png) | ![boards](docs/screenshots/boards.png) | ![dashboard](docs/screenshots/dashboard.png) |
+| Login | Meeting room | Boards | Dashboard |
+|---|---|---|---|
+| ![login](docs/screenshots/login.png) | ![room](docs/screenshots/room.png) | ![boards](docs/screenshots/boards.png) | ![dashboard](docs/screenshots/dashboard.png) |
 
 ## Features
 
