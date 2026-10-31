@@ -1,0 +1,51 @@
+{
+  "target": "https://intellmeet-ai-powered-enterprise-meeting-adtr.onrender.com",
+  "users": 50,
+  "seconds": 32,
+  "total_requests": 900,
+  "requests_per_second": 28.2,
+  "failed": 0,
+  "success_rate_percent": 100,
+  "endpoints": [
+    {
+      "endpoint": "GET /health",
+      "requests": 223,
+      "failed": 0,
+      "p50_ms": 999,
+      "p95_ms": 2288,
+      "p99_ms": 2596,
+      "max_ms": 2816,
+      "errors": {}
+    },
+    {
+      "endpoint": "GET /meetings",
+      "requests": 427,
+      "failed": 0,
+      "p50_ms": 2021,
+      "p95_ms": 3099,
+      "p99_ms": 4061,
+      "max_ms": 4899,
+      "errors": {}
+    },
+    {
+      "endpoint": "GET /analytics/overview",
+      "requests": 202,
+      "failed": 0,
+      "p50_ms": 1958,
+      "p95_ms": 3011,
+      "p99_ms": 4103,
+      "max_ms": 4904,
+      "errors": {}
+    },
+    {
+      "endpoint": "POST /meetings",
+      "requests": 48,
+      "failed": 0,
+      "p50_ms": 2285,
+      "p95_ms": 2803,
+      "p99_ms": 3080,
+      "max_ms": 3080,
+      "errors": {}
+    }
+  ]
+}

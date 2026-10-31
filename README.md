@@ -45,12 +45,7 @@ Real-time video meetings, AI summaries with action items, team boards and analyt
 
 ## Architecture
 
-```
-React client (Vercel) --HTTPS REST--> Express API (Render) --> MongoDB Atlas (+ GridFS)
-        |  \--WebSocket (Socket.io)-->   |  \--> AI provider (or mock)
-        |                                \--> Redis (optional: cache + Socket.io adapter)
-        \--WebRTC (peer-to-peer, STUN/TURN)--> other participants
-```
+| ![architecture](docs/screenshots/architecture.png) |
 
 ## Repository layout
 
@@ -92,8 +87,8 @@ Or with Docker: `docker compose up --build`, then open http://localhost:5173.
 | `PORT` | no | default 5000 |
 | `AI_MODE` | no | `mock` (default, no key) or `openai` |
 | `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL` | only for `openai` mode | any OpenAI-compatible provider |
-| `REDIS_URL` | no | enables caching and the Socket.io adapter |
-| `GOOGLE_CLIENT_ID` | no | enables Google sign-in |
+| `REDIS_URL` | yes | enables caching and the Socket.io adapter |
+| `GOOGLE_CLIENT_ID` | yes | enables Google sign-in |
 | `MONGO_URI_TEST` | for tests | a database whose name contains `test` |
 
 Frontend: `VITE_API_URL` (required), `VITE_GOOGLE_CLIENT_ID` (optional), `VITE_TURN_URL`, `VITE_TURN_USER`, `VITE_TURN_PASS` (optional TURN server for video across networks).

@@ -1,0 +1,27 @@
+{
+  "target": "https://intellmeet-ai-powered-enterprise-meeting-adtr.onrender.com",
+  "requested_connections": 100,
+  "connected": 100,
+  "connect_failed": 0,
+  "join_failed": 0,
+  "connect": {
+    "count": 100,
+    "p50_ms": 2620,
+    "p95_ms": 2747,
+    "max_ms": 4272
+  },
+  "join": {
+    "count": 100,
+    "p50_ms": 4532,
+    "p95_ms": 4737,
+    "max_ms": 5331
+  },
+  "chat_fanout": {
+    "count": 1000,
+    "p50_ms": 602,
+    "p95_ms": 818,
+    "max_ms": 823
+  },
+  "chat_delivered": "1000/1000",
+  "delivery_rate_percent": 100
+}
