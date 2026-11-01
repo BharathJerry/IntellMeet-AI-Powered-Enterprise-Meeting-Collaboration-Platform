@@ -28,7 +28,7 @@ export const googleLogin = asyncHandler(async (req, res) => {
     user = await User.create({
       name: profile.name || email.split("@")[0],
       email,
-      password: await bcrypt.hash(crypto.randomUUID(), 12), // random: this account signs in with Google
+      password: await bcryptjs.hash(crypto.randomUUID(), 12), // random: this account signs in with Google
     });
   }
 
