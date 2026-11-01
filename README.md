@@ -45,7 +45,7 @@ Real-time video meetings, AI summaries with action items, team boards and analyt
 
 ## Architecture
 
-| ![architecture](docs/screenshots/architecture.png) |
+![architecture](docs/screenshots/architecture.png) 
 
 ## Repository layout
 
