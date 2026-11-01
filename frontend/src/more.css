@@ -186,7 +186,44 @@ select {
 .toast.bad {
   border-left-color: var(--red);
 }
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 11px 22px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
+}
 
+.download-btn:hover {
+  transform: translateY(-3px);
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 8px 22px rgba(99, 102, 241, 0.4);
+  color: #ffffff;
+}
+
+.download-icon {
+  font-size: 19px;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+}
+
+.download-btn:hover .download-icon {
+  transform: translateY(3px);
+}
+
+.download-btn:active {
+  transform: scale(0.96);
+}
 @keyframes toast-in {
   from {
     transform: translateY(6px);

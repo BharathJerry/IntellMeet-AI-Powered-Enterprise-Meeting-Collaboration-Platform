@@ -49,11 +49,16 @@ export default function Home({ session, openRoom }) {
     } else openRoom(d.meeting._id);
   });
 
-  const join = run(async (e) => {
+ const join = run(async (e) => {
     e.preventDefault();
-    const id = joinId.trim();
-    await api(`/meetings/${id}/join`, { method: "POST" });
-    openRoom(id);
+    const v = joinId.trim();
+    const code = v.includes("join=") ? new URL(v).searchParams.get("join") : /^[a-f\d]{24}$/i.test(v) ? null : v;
+    if (code) {
+      const d = await api(`/meetings/invite/${encodeURIComponent(code)}/join`, { method: "POST" });
+      return openRoom(d.meetingId);
+    }
+    await api(`/meetings/${v}/join`, { method: "POST" });
+    openRoom(v);
   });
 
   const share = run(async (id) => {

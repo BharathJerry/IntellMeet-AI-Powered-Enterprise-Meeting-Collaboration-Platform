@@ -32,7 +32,10 @@ export default function Recordings({ id }) {
       {url && (
         <>
           <video src={url} controls />
-          <a className="small" href={url} download="meeting-recording.webm">⬇ Download</a>
+          <a className="download-btn" href={url} download="meeting-recording.webm">
+            <span className="download-icon">↓</span>
+            <span>Download Recording</span>
+          </a>
         </>
       )}
     </div>
