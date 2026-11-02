@@ -5,16 +5,19 @@ Real-time video meetings, AI summaries with action items, team boards and analyt
 - **Live demo:** https://intell-meet-ai-powered-enterprise-m-wine.vercel.app
 - **API health check:** https://intellmeet-ai-powered-enterprise-meeting-adtr.onrender.com/health
 - **Demo account:** click **"Try the demo account"** on the login page (no sign-up needed)
-- **Demo video:** `[add your link here]`
-- **Project report (PDF):** `docs/` folder
+- **Demo video:** https://drive.google.com/file/d/1QraXa-R3jVh0-Gnuq7jaAnS5gfh3diGV/view?usp=drive_link
+- **Project report (PDF):** [`docs/report.pdf`](docs/report.pdf)
 
 > The backend runs on Render's free plan, which sleeps when idle. The first request after a quiet period can take 30 to 60 seconds.
 
 ## Screenshots
 
-| Login | Meeting room | Boards | Dashboard |
-|---|---|---|---|
-| ![login](docs/screenshots/login.png) | ![room](docs/screenshots/room.png) | ![boards](docs/screenshots/boards.png) | ![dashboard](docs/screenshots/dashboard.png) |
+| Login | Meeting room | Boards | Dashboard | History |
+|---|---|---|---|---|
+| ![login](docs/screenshots/login.png) | ![room](docs/screenshots/room.png) | ![boards](docs/screenshots/board.png) | ![dashboard](docs/screenshots/dashboard.png) | ![history](docs/screenshots/history.png) |
+| Meeting Page | Waiting Room | Team | Workspace | Profile | 
+|---|---|---|---|---|
+| ![Meeting Page](docs/screenshots/meetings.png) | ![Waiting Room](docs/screenshots/waiting-room.png) | ![Team](docs/screenshots/team.png) | ![Workspace](docs/screenshots/workspace.png) | ![profile](docs/screenshots/profile.png) |
 
 ## Features
 
