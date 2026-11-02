@@ -15,6 +15,7 @@ Real-time video meetings, AI summaries with action items, team boards and analyt
 | Login | Meeting room | Boards | Dashboard | History |
 |---|---|---|---|---|
 | ![login](docs/screenshots/login.png) | ![room](docs/screenshots/room.png) | ![boards](docs/screenshots/board.png) | ![dashboard](docs/screenshots/dashboard.png) | ![history](docs/screenshots/history.png) |
+
 | Meeting Page | Waiting Room | Team | Workspace | Profile | 
 |---|---|---|---|---|
 | ![Meeting Page](docs/screenshots/meetings.png) | ![Waiting Room](docs/screenshots/waiting-room.png) | ![Team](docs/screenshots/team.png) | ![Workspace](docs/screenshots/workspace.png) | ![profile](docs/screenshots/profile.png) |
