@@ -141,4 +141,4 @@ JWT access tokens (15 minutes) with rotating refresh tokens stored as hashes, bc
 
 ## License and credits
 
-Built as a project submission for Zidio Development / LogicVeda. Author: `BHARATH KUMAR C`.
+Built as a project submission for Zidio Development. Author: `BHARATH KUMAR C`.
